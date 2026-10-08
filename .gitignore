@@ -56,3 +56,6 @@ dist-ssr/
 # Operating System files
 .DS_Store
 Thumbs.db
+
+# Local checklist documents
+CheckList
