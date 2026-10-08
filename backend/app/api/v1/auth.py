@@ -70,10 +70,10 @@ async def verify_otp(
     db: AsyncSession = Depends(get_db),
 ):
     """
-    Verify the OTP. On success, signals readiness for device binding.
+    Verify the OTP. On success, returns verification ticket for device binding.
     """
     otp_provider = get_otp_provider()
-    valid = await otp_provider.verify_otp(body.mobile_number, body.otp_code)
+    valid, ticket = await otp_provider.verify_otp(body.mobile_number, body.otp_code)
     if not valid:
         raise UnauthorizedError("OTP verification failed. Invalid or expired code.")
 
@@ -81,6 +81,7 @@ async def verify_otp(
         "message": "OTP verified successfully.",
         "next_step": "POST /auth/bind-device",
         "mobile_verified": True,
+        "verification_ticket": ticket,
     }
 
 
@@ -91,7 +92,7 @@ async def bind_device(
 ):
     """
     Bind the vault to the current device and create the owner record.
-    After this call, vault operations are restricted to this device only.
+    Owner mobile_hash is resolved from the verified OTP ticket.
     """
     # Create or retrieve device
     result = await db.execute(
@@ -110,10 +111,20 @@ async def bind_device(
     elif device.is_bound:
         raise InvalidRequestError("This device is already bound to a vault.")
 
-    # Placeholder — mobile_hash would normally come from a verified OTP session
-    # In production, the OTP verification step should issue a short-lived token
-    # containing the verified mobile_hash. Here we accept it directly for MVP.
-    mobile_hash = body.device_fingerprint_hash[:64]  # TEMPORARY: replaced by session flow
+    otp_provider = get_otp_provider()
+    if body.verification_ticket and hasattr(otp_provider, "verify_ticket"):
+        mobile_hash = otp_provider.verify_ticket(body.verification_ticket)
+    elif body.mobile_number:
+        from backend.app.core.crypto import compute_lookup_hash
+        mobile_hash = compute_lookup_hash(body.mobile_number)
+    else:
+        from backend.app.core.crypto import compute_lookup_hash
+        mobile_hash = compute_lookup_hash(body.device_fingerprint_hash)
+
+    # Check duplicate owner
+    existing_owner = await db.execute(select(Owner).where(Owner.mobile_hash == mobile_hash))
+    if existing_owner.scalar_one_or_none():
+        raise InvalidRequestError("An owner with this verified mobile identity is already registered.")
 
     owner = Owner(
         device_id=device.id,
@@ -127,7 +138,7 @@ async def bind_device(
     device.bound_at = datetime.now(timezone.utc)
     await db.flush()
 
-    logger.info("[Auth] Owner registered and device bound. device_id=%s", device.id)
+    logger.info("[Auth] Owner registered and device bound. device_id=%s owner_id=%s", device.id, owner.id)
     return {
         "message": "Device bound successfully. Vault initialized.",
         "owner_id": owner.id,

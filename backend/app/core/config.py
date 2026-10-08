@@ -90,6 +90,24 @@ class Settings(BaseSettings):
     otp_provider: str = Field(default="mock", alias="OTP_PROVIDER")
     otp_expiry_seconds: int = Field(default=300, alias="OTP_EXPIRY_SECONDS")
 
+    def model_post_init(self, __context) -> None:
+        if self.shade_env == "production":
+            insecure_fallbacks = {
+                "dev-insecure-secret-change-in-env",
+                "test-jwt-secret-for-testing-only",
+                "secret",
+                "change-me",
+            }
+            if not self.shade_jwt_secret or self.shade_jwt_secret in insecure_fallbacks or len(self.shade_jwt_secret) < 32:
+                raise ValueError(
+                    "Production configuration error: SHADE_JWT_SECRET is missing, insecure, or shorter than 32 characters."
+                )
+            if self.otp_provider == "mock":
+                raise ValueError(
+                    "Production configuration error: Mock OTP provider ('mock') is strictly prohibited in production."
+                )
+
+
 
 @lru_cache(maxsize=1)
 def get_settings() -> Settings:

@@ -51,6 +51,14 @@ class DeviceBindingRequest(BaseModel):
         default=None,
         description="Optional Argon2id hash of device PIN for fallback authorization.",
     )
+    verification_ticket: Optional[str] = Field(
+        default=None,
+        description="Single-use ticket issued by /auth/verify-otp.",
+    )
+    mobile_number: Optional[str] = Field(
+        default=None,
+        description="Optional mobile number for identity linking.",
+    )
 
 
 class OwnerStatusResponse(BaseModel):
@@ -181,10 +189,22 @@ class AuthorizationRequest(BaseModel):
     )
 
 
+class AuthChallengeResponse(BaseModel):
+    challenge_id: str
+    owner_id: str
+    action: str
+    resource_id: str
+    nonce: str
+    expires_at: datetime
+
+
 class AuthorizationApprovalRequest(BaseModel):
-    """Owner approves a PENDING authorization (via biometric or PIN)."""
-    authorization_id: str
+    """Owner approves a PENDING authorization (via biometric assertion or PIN)."""
+    authorization_id: Optional[str] = None
     auth_method: str = Field(description="BIOMETRIC | PIN")
+    challenge_id: Optional[str] = Field(default=None, description="Active challenge issued by backend.")
+    assertion: Optional[Any] = Field(default=None, description="Cryptographic assertion payload or PIN input.")
+
 
 
 class AuthorizationResponse(BaseModel):
@@ -211,6 +231,8 @@ class RehydrationSubmitRequest(BaseModel):
     )
     requesting_component: str = Field(..., max_length=128)
     purpose_scope: Optional[str] = None
+    destination_url: Optional[str] = None
+    is_external_ai: Optional[bool] = False
 
 
 class RehydrationSubmitResponse(BaseModel):
@@ -221,6 +243,7 @@ class RehydrationSubmitResponse(BaseModel):
     tokens_detected: List[str]
     rehydration_request_ids: List[str]
     all_authorized: bool
+    destination_trust: Optional[str] = None
     message: str
 
 
@@ -238,11 +261,13 @@ class RehydrationResultResponse(BaseModel):
     rehydration_request_id: str
     synthetic_token: str
     state: str
+    destination_trust: Optional[str] = None
     real_value: Optional[str] = Field(
         default=None,
         description="Decrypted sensitive value. Only present if state=APPROVED. "
                     "MUST NOT be forwarded to external services.",
     )
+
 
 
 # ─────────────────────────────────────────────────────────────────────────────
