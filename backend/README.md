@@ -89,7 +89,7 @@ The **S.H.A.D.E.** backend is the central integration backbone of the applicatio
 ```bash
 python -m pytest -v
 ```
-All 46 test cases pass with full isolation, cryptographic, and security verification.
+All 68 test cases pass with full multi-module integration, security, and isolation verification.
 
 ### Running Backend Server
 ```bash

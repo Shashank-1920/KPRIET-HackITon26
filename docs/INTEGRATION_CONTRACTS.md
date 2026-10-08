@@ -39,12 +39,13 @@ In accordance with [PRODUCT_REQUIREMENTS.md](PRODUCT_REQUIREMENTS.md) §23, **al
 | **Keyed Lookup Hashing** | `IMPLEMENTED` | `PRODUCTION REQUIRED` | Keyed HMAC-SHA256 with separated key |
 | **Full DB Encryption** | `IMPLEMENTED` | `PRODUCTION REQUIRED` | Encrypted at-rest vault file & SQLCipher PRAGMA hooks |
 | **OTP Verification** | `IMPLEMENTED` | `DEV ONLY` (Mock) / `PRODUCTION REQUIRED` (Twilio/SMS) | 300s TTL, 3-attempt limit, brute-force lockout, verified ticket |
-| **Clipboard / DLP** | `IMPLEMENTED` | `PRODUCTION REQUIRED` (M2 Engine) | Sensitive content tokenization & passthrough |
-| **Exposure Search** | `IMPLEMENTED` | `DEV ONLY` (Mock) / `PRODUCTION REQUIRED` (HIBP/OSINT) | Normalized breach result persistence |
-| **Automatic Monitoring** | `IMPLEMENTED` | `STUB` (Scheduler active) / `PRODUCTION REQUIRED` (Breach intelligence) | Background pass with offline resilience |
+| **Clipboard / DLP** | `IMPLEMENTED` | `IMPLEMENTED` (Member 2 DLP Engine) | Sensitive content tokenization & passthrough |
+| **Exposure Search** | `IMPLEMENTED` | `IMPLEMENTED` (Member 2 Threat Intel) | Normalized breach result persistence & k-anonymity |
+| **Automatic Monitoring** | `IMPLEMENTED` | `IMPLEMENTED` (Scheduler + M2 Provider) | Background pass with offline resilience |
 | **Destination Trust** | `IMPLEMENTED` | `PRODUCTION REQUIRED` (Configurable Policy) | Evaluates destination URL: `TRUSTED`, `NOT_TRUSTED`, `UNKNOWN` |
-| **Statutory Erasure** | `IMPLEMENTED` | `PRODUCTION REQUIRED` | 7-day statutory deadline, user-review-before-send |
-| **Risk Engine** | `IMPLEMENTED` | `DEV ONLY` (Mock) / `PRODUCTION REQUIRED` (M3 Engine) | Risk score (0-100) and category ingestion |
+| **Statutory Erasure** | `IMPLEMENTED` | `IMPLEMENTED` (Member 3 DPDP Notice) | 7-day statutory deadline, user-review-before-send |
+| **Risk Engine** | `IMPLEMENTED` | `IMPLEMENTED` (Member 3 AI Risk Engine) | Risk score (0-100) and category ingestion |
+| **Frontend HUD** | `IMPLEMENTED` | `IMPLEMENTED` (Member 4 SPA Interface) | Cyberpunk dark HUD, sandbox, vault & erasure UI |
 
 ---
 
