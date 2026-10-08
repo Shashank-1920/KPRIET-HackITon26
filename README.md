@@ -53,6 +53,7 @@ KPRIET-HackITon26/
 ---
 
 ## 4. Key Documentation Links
+- **[Master Product Requirements (PRODUCT_REQUIREMENTS.md)](docs/PRODUCT_REQUIREMENTS.md)**: Master functional requirements, sensitive data scope, clipboard protection (CTRL+C), 12-char synthetic token rules, and 7-day erasure workflow.
 - **[Master System Architecture (ARCHITECTURE.md)](docs/architecture/ARCHITECTURE.md)**: Comprehensive local-first system blueprint, SQLCipher data vault, sequence diagrams, ER diagrams, and API contracts.
 - **[Repository Structure & Module Ownership (REPOSITORY_STRUCTURE.md)](docs/architecture/REPOSITORY_STRUCTURE.md)**: Strict module boundaries, dependency rules, and Git collaboration workflows.
 - **[Visual Architecture Diagram (repository_architecture.svg)](docs/architecture/diagrams/repository_architecture.svg)**: High-resolution SVG topology of workstream boundaries and local vault flow.

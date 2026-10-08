@@ -93,9 +93,10 @@ KPRIET-HackITon26/
 │   └── integration/                       # Shared: End-to-end multi-module integration tests
 │
 ├── docs/                                  ← ARCHITECTURE & DOCUMENTATION (Member 1)
+│   ├── PRODUCT_REQUIREMENTS.md            # Master product requirements and team reference
 │   └── architecture/
 │       ├── ARCHITECTURE.md                # Master local-first system architecture
-│       ├── REPOSITORY_STRUCTURE.md         # Repository structure & module ownership (this file)
+│       ├── REPOSITORY_STRUCTURE.md        # Repository structure & module ownership (this file)
 │       └── diagrams/                      # System diagrams (SVG, Mermaid, data flow)
 │
 ├── scripts/                               ← UTILITY & REPOSITORY SCRIPTS (Shared)

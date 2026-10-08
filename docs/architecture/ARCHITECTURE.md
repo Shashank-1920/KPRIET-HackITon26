@@ -125,28 +125,47 @@ flowchart TD
 
 ---
 
-## 6. Tokenization Flow
+## 6. Tokenization Flow & Clipboard Protection
+
+### 6.1 Clipboard Protection (CTRL + C)
+S.H.A.D.E. runs as an installed local application. Clipboard protection is triggered specifically when the user performs:
+
+$$\mathbf{CTRL + C}$$
+
+1. Intercepts copied content locally on the host.
+2. Evaluates sensitive-data matchers.
+3. **Normal / General Text**: Ignored completely; clipboard left untouched.
+4. **Sensitive Data Detected**: Real value encrypted locally; clipboard replaced with an **exactly 12-character synthetic token** (e.g., `SHD_7F29B810`).
+
+### 6.2 Token Specification & Duplicate Reuse Rule
+- **Length**: Exactly **12 characters**.
+- **Nature**: Synthetic, non-reversible, safe to expose externally.
+- **Duplicate Handling**: If the exact same sensitive value is detected again, do **NOT** create a duplicate database record; **reuse** the existing synthetic token and mapping.
 
 ```mermaid
 sequenceDiagram
     autonumber
-    actor User as User / Outbound Action
+    actor User as User / Clipboard (CTRL+C)
     participant DLP as DLP Interceptor (Regex + Verhoeff)
     participant Tokenizer as Synthetic Tokenizer
     participant Vault as Local Encrypted Vault
     participant KeyStore as SecureKeyStore
 
-    User->>DLP: Enters text containing Aadhaar: "2668 5333 9452"
-    DLP->>DLP: Regex match + Dihedral D5 Verhoeff checksum: VALID!
+    User->>DLP: Copies text containing sensitive secret (CTRL+C)
+    DLP->>DLP: Regex match + Dihedral D5 Verhoeff: SENSITIVE!
     DLP->>Tokenizer: Trigger Synthetic Replacement
-    Tokenizer->>KeyStore: Request Master Encryption Key
-    KeyStore-->>Tokenizer: 32-Byte AES-GCM Key (in RAM)
-    Tokenizer->>Tokenizer: Generate 12-Byte CSPRNG Nonce
-    Tokenizer->>Tokenizer: Encrypt Real Value via AES-256-GCM
-    Tokenizer->>Tokenizer: Generate Synthetic Token: <SYN_AADHAAR_7F29>
-    Tokenizer->>Vault: INSERT INTO token_mappings (token_id, <SYN_AADHAAR_7F29>, ciphertext, nonce)
-    Tokenizer-->>User: Emits Safe String: "<SYN_AADHAAR_7F29>"
-    Note over User: Real plaintext NEVER leaves the host device!
+    Tokenizer->>Vault: Check existing mapping for identical plaintext hash
+    alt Exact Same Sensitive Value Already Stored
+        Vault-->>Tokenizer: Return existing 12-char token: SHD_7F29B810
+    else New Sensitive Value
+        Tokenizer->>KeyStore: Request Master Encryption Key
+        KeyStore-->>Tokenizer: 32-Byte AES-GCM Key (in RAM)
+        Tokenizer->>Tokenizer: Generate 12-Byte Nonce & Encrypt Real Value
+        Tokenizer->>Tokenizer: Generate new 12-char token: SHD_7F29B810
+        Tokenizer->>Vault: INSERT INTO token_mappings (token_id, SHD_7F29B810, ciphertext, nonce)
+    end
+    Tokenizer-->>User: Places 12-char token in clipboard: "SHD_7F29B810"
+    Note over User: Real plaintext NEVER remains in the clipboard!
 ```
 
 ---
@@ -163,43 +182,49 @@ sequenceDiagram
     actor Owner as Local Owner
     participant Vault as Local Encrypted Vault
 
-    External->>Backend: Inbound text: "Document verified for <SYN_AADHAAR_7F29>"
-    Backend->>Detector: Scan for Synthetic Token Format (<SYN_...>)
-    Detector-->>Backend: Found Token: <SYN_AADHAAR_7F29>
+    External->>Backend: Inbound text containing "SHD_7F29B810"
+    Backend->>Detector: Scan for 12-Character Synthetic Token
+    Detector-->>Backend: Found Token: SHD_7F29B810
     Backend->>Gate: Verify Authorization for Rehydration
-    Gate->>Owner: Prompt: "Rehydrate Aadhaar number on your screen?"
-    Owner->>Gate: Grant Permission (APPROVED)
-    Gate->>Vault: Query mapping for <SYN_AADHAAR_7F29>
+    Gate->>Owner: Prompt: "Rehydrate sensitive value on your screen?"
+    Owner->>Gate: Grant Permission (APPROVED via Biometric / PIN)
+    Gate->>Vault: Query mapping for SHD_7F29B810
     Vault-->>Gate: Encrypted Record (Ciphertext + Nonce)
     Gate->>Gate: Decrypt with OS Key in RAM
-    Gate-->>Owner: Render: "Document verified for 2668 5333 9452"
+    Gate-->>Owner: Render real value on local display
     Note over Backend: External service has ZERO awareness of real value!
 ```
 
 ---
 
-## 8. Permission Flow & State Machine
+## 8. Permission Flow, Owner Authorization & Lifetime
 
-Access to real sensitive data requires explicit, granular owner consent. Synthetic data may flow externally, but rehydration is strictly guarded:
+### 8.1 Biometric & PIN Fallback
+- **REQUEST $\neq$ AUTHORIZATION**: External requests never imply authorization.
+- **Biometric Preference**: Fingerprint or Face ID-style device biometric.
+- **Fallback**: Device PIN/password if biometric is unavailable.
+
+### 8.2 Authorization Lifetime
+Once the owner authorizes access to a sensitive value, the authorization remains valid **until that sensitive-value record is deleted from S.H.A.D.E.'s local database**. Deleting the sensitive-value record immediately invalidates the associated authorization.
 
 ```mermaid
 stateDiagram-v2
     [*] --> PENDING: Rehydration Request Generated
-    PENDING --> APPROVED: Owner Explicitly Consents
+    PENDING --> APPROVED: Owner Consents (Biometric / PIN)
     PENDING --> DENIED: Owner Rejects Request
     PENDING --> EXPIRED: Request Timeout (Fails Closed)
-    APPROVED --> REVOKED: Owner Terminates Access
-    APPROVED --> [*]: Access Window Concluded
+    APPROVED --> REVOKED: Record Deleted from Local Database
+    APPROVED --> [*]: Access Session Concluded
     DENIED --> [*]: Synthetic Token Retained
     EXPIRED --> [*]: Synthetic Token Retained
-    REVOKED --> [*]: Key Session Destroyed
+    REVOKED --> [*]: Authorization Permanently Invalidated
 ```
 
 ### Permission Attributes:
-- **Token ID**: Identifies the specific synthetic token requested.
+- **Token ID**: Identifies the 12-character synthetic token requested.
 - **Requesting Component**: Identifies which client/application requested access.
 - **Purpose / Scope**: Documented business justification (e.g., KYC submission).
-- **Time Limit**: Strict expiration budget (e.g., 60 seconds).
+- **Time Limit**: Strict interactive prompt budget (e.g., 60 seconds).
 - **Audit Record**: Every decision generates a sanitized audit log entry.
 
 ---
@@ -317,27 +342,62 @@ erDiagram
 
 ---
 
-## 11. DLP Architecture
+## 11. DLP & Sensitive Data Scope
 
-- **Scope**: Outbound prompt inspection, clipboard monitoring, form data.
+### 11.1 Sensitive Data Scope
+S.H.A.D.E. protects sensitive identifiers, credentials, and keys:
+- **Government IDs**: Aadhaar (Dihedral D5 Verhoeff validated), PAN cards
+- **Communication & Identity**: Mobile numbers, email addresses, vehicle number plates
+- **Cryptographic & API Secrets**: API keys, access keys, secret keys, passwords, URLs containing secrets
+- **Financial Identifiers**: Credit/debit card numbers, UPI IDs
+- **Scope Boundary**: Documents (PDFs, scans, files) are **NOT** part of the current sensitive-data scope. The detection suite is extensible to allow future data types.
+
+### 11.2 Deterministic Matching & 12-Character Tokenization
 - **Deterministic Matchers**:
-  - **Aadhaar**: Regular expression `\b[2-9][0-9]{3}\s?[0-9]{4}\s?[0-9]{4}\b` verified with the **Dihedral D5 Verhoeff algorithm**. False positives are mathematically rejected without network overhead.
-  - **PAN**: Regular expression `\b[A-Z]{5}[0-9]{4}[A-Z]{1}\b` with entity type character verification.
-  - **API Keys**: High-entropy token scanners (AWS, GitHub, Slack tokens).
-- **Synthetic Replacement**: Matched strings are replaced with deterministic placeholders (`<SYN_{TYPE}_{CRC16}>`).
+  - **Aadhaar**: Regex `\b[2-9][0-9]{3}\s?[0-9]{4}\s?[0-9]{4}\b` verified with the **Dihedral D5 Verhoeff checksum algorithm**. False positives are mathematically rejected locally.
+  - **PAN**: Regex `\b[A-Z]{5}[0-9]{4}[A-Z]{1}\b` with entity type character verification.
+  - **API Keys / Secrets**: High-entropy token scanners (AWS, GitHub, Slack tokens).
+- **Synthetic Replacement**: Matched sensitive values are replaced with an **exactly 12-character synthetic token** (e.g., `SHD_7F29B810`).
+- **Reuse Invariant**: If the exact same sensitive value is detected again, S.H.A.D.E. **reuses** the existing 12-character token without creating duplicate database records.
 
 ---
 
-## 12. Threat & Risk Architecture
+## 12. Threat, Risk & Exposure Architecture
 
-Owned by **Member 2**:
-- **Canary Honey-Tokens**: Generates trackable synthetic decoy credentials for third-party registrations (`user+canary_1234@shade-vault.io`). If leaked, trips an instant alert for cryptographic leak attribution.
-- **Breach Radar (HIBP k-Anonymity Standard)**:
-  - Computes SHA-1 hash of password locally.
-  - Sends only the first 5 characters to `api.pwnedpasswords.com/range/{prefix}`.
-  - Performs local binary comparison on the remaining 35 characters.
-  - **Prohibition**: Raw passwords, Aadhaar, PAN, or personal identities are **never** transmitted to HIBP.
-- **0–100 Exposome Threat Index**: Deterministic weighted matrix evaluating breach exposures, PII density, anomaly signals, and canary trip indicators.
+Owned by **Member 2** (with Risk Scoring logic by **Member 3**):
+
+### 12.1 Trusted Destinations Policy
+- **Trusted Destinations**: Government websites (`*.gov.in`, `*.nic.in`) and college/university websites (`*.ac.in`, `*.edu`) are considered trusted destinations.
+- **Untrusted Policy**: Other websites that merely provide publicly accessible or open-source data are **NOT** automatically considered trusted.
+- **Invariant**: *"Publicly accessible" does NOT mean "trusted."* Destination trust is strictly governed by policy.
+
+### 12.2 Manual Search & Automatic Monitoring
+- **Manual Exposure Search**: The owner can search their own email, mobile number, API key, password, or Aadhaar across exposure dumps.
+- **Automatic Exposure Monitoring**: S.H.A.D.E. automatically monitors stored sensitive items in the background for newly discovered exposures without requiring repetitive manual input.
+
+### 12.3 Risk Scoring & Business Classification (0–100)
+Member 3's risk engine provides the numeric risk score:
+- **Score Range**: `0–100`
+- **Business Classifications**:
+  - **No exposure** $\rightarrow$ `0`
+  - **Low-risk website** $\rightarrow$ `LOW`
+  - **Private organization** $\rightarrow$ `MEDIUM`
+  - **Public organization** $\rightarrow$ `CRITICAL`
+- **Evidence Integrity**: S.H.A.D.E. distinguishes available evidence from unsupported assumptions. It never falsely accuses individuals without verifiable forensic evidence.
+
+### 12.4 Breach Radar (HIBP k-Anonymity Standard)
+- Computes local SHA-1 of password.
+- Sends only the first 5 characters to `api.pwnedpasswords.com/range/{prefix}`.
+- Suffix matching performed locally in memory.
+- **Strict Prohibition**: Passwords are never sent plaintext. Aadhaar, PAN, emails, and identity records are **never** transmitted to HIBP.
+
+### 12.5 Statutory Erasure Workflow & Case Management
+When an exposure occurs:
+1. S.H.A.D.E. prepares a formal erasure request citing the DPDP Act 2023.
+2. The user reviews and retains control over sending the request.
+3. A **7-day statutory deadline** is monitored.
+4. If no response is received, a follow-up request is queued and case status is updated.
+5. Case records track: `case_id`, `organization`, `data_type`, `discovery_date`, `evidence`, `risk_score`, `request_date`, `7_day_deadline`, `status`.
 
 ---
 
