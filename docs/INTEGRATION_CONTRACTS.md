@@ -205,7 +205,44 @@ In accordance with [PRODUCT_REQUIREMENTS.md](PRODUCT_REQUIREMENTS.md) §23, **al
 ## 8. Statutory Erasure & 7-Day Deadline Workflow
 
 1. **Create Draft**: `POST /api/v1/erasure/` (`status="DRAFT"`)
-2. **User Explicitly Sends**: `POST /api/v1/erasure/{id}/send` (Starts 7-day statutory deadline)
+2. **User Explicitly Sends**: `POST /api/v1/erasure/{id}/send` (Starts 7-day statutory deadline, dispatches via configured SMTP or dev simulation)
 3. **Deadline Status**: `GET /api/v1/erasure/{id}/deadline`
 4. **Follow-Up Dispatch**: `POST /api/v1/erasure/{id}/followup` (Allowed after deadline passes without response)
 5. **Record Evidence Response**: `POST /api/v1/erasure/{id}/response`
+
+---
+
+## 9. Real-World Camera & Optical Presence Contract
+
+### Contract 9.1: Camera Hardware & Ephemeral Presence (`/api/v1/auth/camera`)
+- **Status Endpoint**: `GET /api/v1/auth/camera/status`
+  - Returns: `{ "camera_available": bool, "device_index": int, "resolution": [w, h], "is_windows_hello_hardware": false }`
+  - Invariant: Optical webcam is truthfully distinguished from Windows Hello IR depth hardware.
+- **Verification Endpoint**: `POST /api/v1/auth/camera/verify-presence`
+  - Returns: `{ "verified": bool, "faces_detected": int, "processing_time_ms": float, "is_windows_hello_hardware": false }`
+  - **Zero Disk Storage Invariant**: Biometric image frames are never saved to disk or database. Frames are processed ephemerally in RAM and released immediately via `cap.release()`.
+
+---
+
+## 10. Platform Biometric & Cryptographic Attestation Contract
+
+### Contract 10.1: Cryptographic Assertion Gate (`/api/v1/authorization`)
+- **Challenge Issuance**: `POST /api/v1/authorization/challenge/{id}`
+  - Issues 60s single-use cryptographic challenge nonce.
+- **Cryptographic Approval**: `POST /api/v1/authorization/approve/{id}`
+  - Accepts `assertion`:
+    - Ed25519 or ECDSA P-256 digital signature over `challenge_nonce`.
+    - Includes `public_key` and `signature` (base64-encoded).
+  - Anti-replay enforcement: Nonce cannot be reused.
+  - Fallback: Argon2id owner PIN fallback with lockout protection.
+
+---
+
+## 11. External Breach Disclosure Contract
+
+### Contract 11.1: Breach Provider Capabilities (`/api/v1/exposure/capabilities`)
+- Returns truthfully scoped provider capabilities:
+  - `PASSWORD`: k-anonymity SHA-1 prefixing (Cloudflare / NIST compliant).
+  - `EMAIL`: HIBP v3 account API (requires configured API key).
+  - `CANARY`: Local honeypot attribution provider.
+  - `AADHAAR`, `PAN`, `DRIVING_LICENSE`, `CREDIT_CARD`: Explicitly reported as `UNSUPPORTED` (no lawful public breach lookup API exists).

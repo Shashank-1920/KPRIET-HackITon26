@@ -2,7 +2,7 @@
 
 **Ownership**: Member 1 (`member-1/backend`)  
 **Role**: Core Architecture + Backend + Database + Security Integration  
-**Status**: HARDENED IMPLEMENTATION & TESTED (46/46 Tests Passing)  
+**Status**: HARDENED IMPLEMENTATION & REAL-WORLD VERIFIED (88/88 Tests Passing)  
 
 ---
 
@@ -81,15 +81,21 @@ The **S.H.A.D.E.** backend is the central integration backbone of the applicatio
 - `DestinationTrustEvaluator` classifies destinations into `TRUSTED`, `NOT_TRUSTED`, and `UNKNOWN`.
 - Unknown destinations are never automatically trusted.
 
+### 2.9 Real-World Integrations & Hardware Truthfulness
+- **Camera Presence Verification**: `CameraVerifier` detects optical webcam hardware (verified on device index 0 at 640x480), checks Haar cascades, and performs ephemeral optical presence verification with **zero biometric image persistence** on disk or database. Explicitly and truthfully distinguishes optical webcam from Windows Hello IR depth hardware (`is_windows_hello_hardware: False`).
+- **Platform Biometric Boundary**: Verifies cryptographic signatures (Ed25519 & ECDSA P-256) over single-use challenge nonces with anti-replay guarantees, client-forgery rejection, and Argon2id PIN fallback.
+- **Statutory SMTP Legal Delivery**: `SMTPDeliveryProvider` provides configurable, TLS-secured dispatch with dev-simulation fallback and strict idempotency to prevent duplicate notice dispatch.
+- **Accurately Scoped Breach Providers**: HIBP k-anonymity SHA-1 prefixing for passwords, optional HIBP v3 account API with authenticated key, local canary attribution, and truthful unsupported declaration for Aadhaar, PAN, and License Plates.
+
 ---
 
 ## 3. Running & Testing
 
 ### Running Tests
 ```bash
-python -m pytest -v
+python -m pytest -v --durations=10
 ```
-All 68 test cases pass with full multi-module integration, security, and isolation verification.
+All 88 test cases pass with full multi-module integration, real-world hardware verification, security attack resistance, and owner isolation verification.
 
 ### Running Backend Server
 ```bash

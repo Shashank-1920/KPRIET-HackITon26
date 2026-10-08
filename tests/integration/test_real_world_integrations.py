@@ -272,3 +272,58 @@ async def test_exposure_capabilities_truthful_disclosure(client: AsyncClient):
     assert "AADHAAR" in nat_id["unsupported_data_types"]
     assert "PAN" in nat_id["unsupported_data_types"]
     assert "UNSUPPORTED" in nat_id["lookup_mechanism"]
+
+
+# ── 4. REAL LAPTOP CAMERA HARDWARE & OPTICAL PRESENCE TESTS ─────────────────
+
+def test_camera_hardware_detection_and_clean_release():
+    from backend.app.services.camera_verifier import CameraVerifier
+    verifier = CameraVerifier(camera_index=0)
+    caps = verifier.check_hardware_capability()
+    assert "platform" in caps
+    assert "camera_detected" in caps
+    assert "is_windows_hello_hardware" in caps
+    # Invariant: Truthfully states RGB webcam is not Windows Hello IR depth hardware
+    assert caps["is_windows_hello_hardware"] is False
+    assert caps["zero_image_storage_enforced"] is True
+
+
+def test_camera_ephemeral_optical_presence_check():
+    from backend.app.services.camera_verifier import CameraVerifier
+    verifier = CameraVerifier(camera_index=0)
+    res = verifier.verify_optical_presence(max_frames=1, timeout_seconds=0.5)
+    assert isinstance(res.camera_detected, bool)
+    assert isinstance(res.accessible, bool)
+    assert isinstance(res.face_present, bool)
+    assert res.is_windows_hello_certified is False
+    assert res.latency_ms >= 0.0
+
+
+
+def test_camera_invalid_index_fails_gracefully():
+    from backend.app.services.camera_verifier import CameraVerifier
+    verifier = CameraVerifier(camera_index=999)
+    res = verifier.verify_optical_presence(max_frames=1, timeout_seconds=0.5)
+    assert res.accessible is False
+    assert res.face_present is False
+    assert "Cannot open camera" in (res.error_message or "")
+
+
+@pytest.mark.asyncio
+async def test_camera_status_and_verify_endpoints(client: AsyncClient):
+    # 1. Camera status endpoint
+    r1 = await client.get("/api/v1/auth/camera/status")
+    assert r1.status_code == 200
+    data1 = r1.json()
+    assert "camera_detected" in data1
+    assert data1["is_windows_hello_hardware"] is False
+    assert data1["zero_image_storage_enforced"] is True
+
+    # 2. Camera verify-presence endpoint
+    r2 = await client.post("/api/v1/auth/camera/verify-presence")
+    assert r2.status_code == 200
+    data2 = r2.json()
+    assert "camera_detected" in data2
+    assert "face_present" in data2
+    assert data2["zero_image_storage"] is True
+

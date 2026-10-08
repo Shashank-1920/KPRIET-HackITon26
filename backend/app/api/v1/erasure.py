@@ -40,6 +40,14 @@ router = APIRouter()
 _DEADLINE_DAYS = 7
 
 
+def _as_utc(dt: Optional[datetime]) -> Optional[datetime]:
+    if dt is None:
+        return None
+    if dt.tzinfo is None:
+        return dt.replace(tzinfo=timezone.utc)
+    return dt
+
+
 @router.post("/", response_model=ErasureRequestResponse, summary="Create erasure request (DRAFT)")
 async def create_erasure_request(
     body: ErasureRequestCreate,
@@ -103,13 +111,14 @@ async def send_erasure_request(
     if case is None or case.owner_id != session_ctx.owner.id:
         raise NotFoundError("Erasure request not found.")
 
+
     # Prevent accidental duplicate send if already successfully sent
     if req.status == "SENT":
         return ErasureRequestSendResponse(
             id=req.id,
             status=req.status,
-            request_date=req.request_date or datetime.now(timezone.utc),
-            deadline_date=req.deadline_date or datetime.now(timezone.utc),
+            request_date=_as_utc(req.request_date) or datetime.now(timezone.utc),
+            deadline_date=_as_utc(req.deadline_date) or datetime.now(timezone.utc),
             message=f"Erasure request was already sent. 7-day statutory deadline is active.",
         )
 
@@ -146,8 +155,8 @@ async def send_erasure_request(
     return ErasureRequestSendResponse(
         id=req.id,
         status=req.status,
-        request_date=req.request_date or now,
-        deadline_date=req.deadline_date or now,
+        request_date=_as_utc(req.request_date) or now,
+        deadline_date=_as_utc(req.deadline_date) or now,
         message=msg,
     )
 

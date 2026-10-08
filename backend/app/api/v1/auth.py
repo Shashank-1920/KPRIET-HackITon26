@@ -165,3 +165,36 @@ async def owner_status(db: AsyncSession = Depends(get_db)):
         device_is_bound=device.is_bound if device else False,
         registered_at=owner.registered_at,
     )
+
+
+@router.get("/camera/status", summary="Inspect physical laptop camera availability and capabilities")
+async def get_camera_status():
+    """
+    Truthfully inspects physical webcam hardware availability.
+    Clarifies that standard RGB webcams are NOT Windows Hello certified sensors.
+    """
+    from backend.app.services.camera_verifier import get_camera_verifier
+    verifier = get_camera_verifier()
+    return verifier.check_hardware_capability()
+
+
+@router.post("/camera/verify-presence", summary="Execute ephemeral optical presence verification")
+async def verify_camera_presence():
+    """
+    Executes an ephemeral face presence check using the laptop camera.
+    Zero biometric image storage: frames are evaluated in memory and immediately discarded.
+    """
+    from backend.app.services.camera_verifier import get_camera_verifier
+    verifier = get_camera_verifier()
+    res = verifier.verify_optical_presence()
+    return {
+        "camera_detected": res.camera_detected,
+        "accessible": res.accessible,
+        "face_present": res.face_present,
+        "frame_dimensions": res.frame_dimensions,
+        "latency_ms": res.latency_ms,
+        "is_windows_hello_certified": res.is_windows_hello_certified,
+        "zero_image_storage": True,
+        "error_message": res.error_message,
+    }
+
