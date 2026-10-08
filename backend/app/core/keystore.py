@@ -2,8 +2,14 @@
 S.H.A.D.E. — SecureKeyStore Platform Abstraction
 Role: Member 1 — Core Architecture + Backend + Database + Integration
 
-Master encryption key management via OS-level secure storage.
+Master encryption key management via OS-level secure storage with cryptographic key separation.
 Keys must NEVER be stored inside the SQLite vault or committed to Git.
+
+Cryptographic Key Separation (via HKDF-SHA256):
+  - Vault Key       : AES-256-GCM for individual sensitive values (info=b"shade:vault:v1")
+  - Database Key    : PRAGMA key for encrypted SQLite storage (info=b"shade:database:v1")
+  - Lookup HMAC Key : HMAC-SHA256 for non-reversible duplicate detection (info=b"shade:lookup_hmac:v1")
+  - JWT Secret      : HMAC-SHA256 session token signing (info=b"shade:jwt_secret:v1")
 
 Platform adapters:
   - Windows : DPAPI / Windows Credential Manager (via keyring)
@@ -11,8 +17,9 @@ Platform adapters:
   - Linux   : Secret Service API / libsecret (via keyring)
   - Dev/CI  : High-entropy environment-provided passphrase (fallback only)
 
-The key is held in process RAM only while the vault is open.
-It is never logged, serialised, or persisted to disk by this module.
+SECURITY INVARIANTS:
+- In production, failing OS keystore fails securely. Never silently create ephemeral keys in production.
+- Keys are held in RAM only while the vault is open; never logged.
 """
 
 import base64
@@ -23,12 +30,18 @@ import secrets
 from abc import ABC, abstractmethod
 from typing import Optional
 
+from cryptography.hazmat.primitives import hashes
+from cryptography.hazmat.primitives.kdf.hkdf import HKDF
+
+from backend.app.core.config import settings
+from backend.app.core.errors import KeyStoreUnavailableError
+
 logger = logging.getLogger(__name__)
 
 # Service name used by OS keyring entries
 _KEYRING_SERVICE = "SHADE_VAULT"
 _KEYRING_USERNAME = "master_encryption_key"
-_KEY_BYTE_LENGTH = 32  # AES-256-GCM
+_KEY_BYTE_LENGTH = 32  # 256 bits
 
 
 class KeyStoreBackend(ABC):
@@ -55,7 +68,7 @@ class KeyringBackend(KeyStoreBackend):
 
     def load_or_create_key(self) -> bytes:
         try:
-            import keyring  # type: ignore
+            import keyring
 
             stored = keyring.get_password(_KEYRING_SERVICE, _KEYRING_USERNAME)
             if stored:
@@ -76,9 +89,13 @@ class KeyringBackend(KeyStoreBackend):
 
         except Exception as exc:
             logger.error(
-                "[SecureKeyStore] OS keyring unavailable: %s — falling back to env/dev backend.",
+                "[SecureKeyStore] OS keyring unavailable: %s",
                 type(exc).__name__,
             )
+            if settings.shade_env == "production":
+                raise KeyStoreUnavailableError(
+                    "OS secure keystore failed in production. Refusing to operate insecurely."
+                ) from exc
             raise
 
     def delete_key(self) -> None:
@@ -101,6 +118,12 @@ class EnvDevBackend(KeyStoreBackend):
         self._env_key = env_key or os.environ.get("SHADE_MASTER_ENCRYPTION_KEY")
 
     def load_or_create_key(self) -> bytes:
+        if settings.shade_env == "production":
+            raise KeyStoreUnavailableError(
+                "EnvDevBackend is strictly prohibited in production. "
+                "OS-level secure keystore (DPAPI/Keychain/SecretService) is mandatory."
+            )
+
         if self._env_key:
             try:
                 raw = base64.b64decode(self._env_key)
@@ -122,16 +145,14 @@ class EnvDevBackend(KeyStoreBackend):
         return key
 
     def delete_key(self) -> None:
-        pass  # Nothing to delete for env/ephemeral backend
+        pass
 
 
 def _detect_platform_backend() -> KeyStoreBackend:
     """Select the appropriate backend for the current platform."""
     system = platform.system()
     try:
-        import keyring  # noqa: F401
-
-        # Verify keyring actually has a working backend on this machine
+        import keyring
         import keyring.backend as kb
 
         viable = [b for b in kb.get_all_keyring() if not b.__class__.__name__.startswith("Fail")]
@@ -141,54 +162,89 @@ def _detect_platform_backend() -> KeyStoreBackend:
     except Exception:
         pass
 
+    if settings.shade_env == "production":
+        raise KeyStoreUnavailableError(
+            "Production requires a viable OS keyring backend. None available."
+        )
+
     logger.warning("[SecureKeyStore] No OS keyring available; falling back to env/dev backend.")
     return EnvDevBackend()
 
 
 class SecureKeyStore:
     """
-    Singleton-style wrapper providing a stable API for key retrieval.
-    Usage:
-        key_store = SecureKeyStore()
-        key: bytes = key_store.get_master_key()
+    Key store providing domain-separated keys derived from the master root key.
     """
 
     def __init__(self, backend: Optional[KeyStoreBackend] = None) -> None:
         self._backend = backend or _detect_platform_backend()
-        self._cached_key: Optional[bytes] = None
+        self._cached_root_key: Optional[bytes] = None
+        self._cached_vault_key: Optional[bytes] = None
+        self._cached_db_key: Optional[bytes] = None
+        self._cached_lookup_key: Optional[bytes] = None
+        self._cached_jwt_secret: Optional[str] = None
+
+    def _derive_key(self, info: bytes, length: int = 32) -> bytes:
+        root_key = self.get_master_key()
+        hkdf = HKDF(
+            algorithm=hashes.SHA256(),
+            length=length,
+            salt=None,
+            info=info,
+        )
+        return hkdf.derive(root_key)
 
     def get_master_key(self) -> bytes:
-        """
-        Return the 32-byte AES-256-GCM master encryption key.
-        Loaded once per process lifetime; held in RAM only.
-        """
-        if self._cached_key is None:
-            self._cached_key = self._backend.load_or_create_key()
-        return self._cached_key
+        """Return the 32-byte root master key."""
+        if self._cached_root_key is None:
+            self._cached_root_key = self._backend.load_or_create_key()
+        return self._cached_root_key
+
+    def get_vault_key(self) -> bytes:
+        """Return 32-byte AES-256-GCM encryption key for individual sensitive values."""
+        if self._cached_vault_key is None:
+            self._cached_vault_key = self._derive_key(b"shade:vault:v1", 32)
+        return self._cached_vault_key
+
+    def get_database_key(self) -> bytes:
+        """Return 32-byte encryption key for local SQLite/SQLCipher vault database."""
+        if self._cached_db_key is None:
+            self._cached_db_key = self._derive_key(b"shade:database:v1", 32)
+        return self._cached_db_key
+
+    def get_lookup_hmac_key(self) -> bytes:
+        """Return 32-byte HMAC key for non-reversible duplicate detection."""
+        if self._cached_lookup_key is None:
+            self._cached_lookup_key = self._derive_key(b"shade:lookup_hmac:v1", 32)
+        return self._cached_lookup_key
+
+    def get_jwt_secret(self) -> str:
+        """Return JWT signing secret."""
+        if self._cached_jwt_secret is None:
+            derived = self._derive_key(b"shade:jwt_secret:v1", 32)
+            self._cached_jwt_secret = base64.b64encode(derived).decode()
+        return self._cached_jwt_secret
 
     def rotate_key(self) -> bytes:
-        """
-        Generate and store a new master key, invalidating the cached one.
-        NOTE: Existing vault ciphertext will no longer be decryptable after rotation.
-        This operation requires a full vault re-encryption (not yet implemented).
-        """
-        self._cached_key = None
+        """Rotate the master key and clear derived key caches."""
+        self.clear_from_memory()
         return self.get_master_key()
 
     def clear_from_memory(self) -> None:
-        """Overwrite the in-memory key reference. Call on application shutdown."""
-        if self._cached_key is not None:
-            # Best-effort zeroing (CPython internals may prevent true zeroing)
-            self._cached_key = b"\x00" * len(self._cached_key)
-            self._cached_key = None
+        """Wipe cached keys from memory."""
+        self._cached_root_key = None
+        self._cached_vault_key = None
+        self._cached_db_key = None
+        self._cached_lookup_key = None
+        self._cached_jwt_secret = None
 
 
-# Module-level singleton — imported by vault and token services
+# Module-level singleton
 _key_store_instance: Optional[SecureKeyStore] = None
 
 
 def get_key_store() -> SecureKeyStore:
-    """Return (or initialise) the module-level SecureKeyStore singleton."""
+    """Return the module-level SecureKeyStore singleton."""
     global _key_store_instance
     if _key_store_instance is None:
         _key_store_instance = SecureKeyStore()

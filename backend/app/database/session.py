@@ -13,6 +13,7 @@ from pathlib import Path
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
 from backend.app.core.config import settings
+from backend.app.database.encrypted_sqlite import configure_sqlite_encryption
 from backend.app.database.models import Base
 
 logger = logging.getLogger(__name__)
@@ -23,6 +24,8 @@ _engine = create_async_engine(
     echo=settings.debug,
     connect_args={"check_same_thread": False},
 )
+configure_sqlite_encryption(_engine)
+
 
 # ── Session factory ───────────────────────────────────────────────────────────
 AsyncSessionLocal = async_sessionmaker(

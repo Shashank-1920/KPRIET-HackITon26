@@ -84,3 +84,9 @@ class SensitiveDataNotFoundError(ShadeError):
 class ExternalServiceUnavailableError(ShadeError):
     status_code = 503
     error_code = "EXTERNAL_SERVICE_UNAVAILABLE"
+
+
+class KeyStoreUnavailableError(ShadeError):
+    status_code = 503
+    error_code = "KEYSTORE_UNAVAILABLE"
+
