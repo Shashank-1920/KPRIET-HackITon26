@@ -3,7 +3,18 @@ S.H.A.D.E. — Shared Pytest Configuration & Test Fixtures
 """
 
 import os
+import sys
 from pathlib import Path
+
+_repo_root = str(Path(__file__).resolve().parent.parent)
+while _repo_root in sys.path:
+    sys.path.remove(_repo_root)
+sys.path.insert(0, _repo_root)
+
+_tests_dir = str(Path(__file__).resolve().parent)
+while _tests_dir in sys.path:
+    sys.path.remove(_tests_dir)
+
 import pytest_asyncio
 from httpx import AsyncClient, ASGITransport
 

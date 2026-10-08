@@ -1,0 +1,62 @@
+version: '3.8'
+
+# ==============================================================================
+# S.H.A.D.E. — Local-First Reproducible Deployment Configuration
+# S.H.A.D.E. is a device-local security system. The authoritative data vault
+# is a local encrypted SQLite database stored on the owner's host volume.
+# External database servers are NOT required for the core application.
+# ==============================================================================
+
+services:
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: shade_backend
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:8000:8000"
+    environment:
+      - SHADE_ENV=production
+      - DATABASE_URL=sqlite+aiosqlite:///app/data/shade_vault.db
+      - DATABASE_ENCRYPTION_PROVIDER=sqlcipher
+      - KEY_STORAGE_BACKEND=dev-passphrase
+      - SHADE_MASTER_ENCRYPTION_KEY=${SHADE_MASTER_ENCRYPTION_KEY}
+      - SHADE_JWT_SECRET=${SHADE_JWT_SECRET}
+    volumes:
+      # Local encrypted vault storage mounted directly from host
+      - shade_local_vault:/app/data
+    networks:
+      - shade_network
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: shade_frontend
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:3000:80"
+    depends_on:
+      - backend
+    networks:
+      - shade_network
+
+  # OPTIONAL: Ephemeral Redis cache service (enabled only via --profile distributed-cache)
+  # Not required for local operation; backend automatically uses in-memory sliding-window throttling.
+  cache:
+    image: redis:7-alpine
+    container_name: shade_redis_optional
+    restart: unless-stopped
+    command: ["redis-server", "--maxmemory", "128mb", "--maxmemory-policy", "volatile-lru"]
+    profiles:
+      - distributed-cache
+    networks:
+      - shade_network
+
+volumes:
+  shade_local_vault:
+
+networks:
+  shade_network:
+    driver: bridge
