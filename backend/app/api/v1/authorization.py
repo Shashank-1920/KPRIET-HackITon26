@@ -3,10 +3,11 @@ S.H.A.D.E. — Authorization Router
 Role: Member 1 — Core Architecture + Backend + Database + Integration
 
 Endpoints:
-  POST /authorization/request      — Request access to a sensitive value
-  POST /authorization/approve/{id} — Owner approves (biometric/PIN)
-  POST /authorization/deny/{id}    — Owner denies
-  GET  /authorization/{id}         — Check authorization state
+  POST /authorization/request           — Request access to a sensitive value
+  POST /authorization/challenge/{id}    — Create single-use authentication challenge
+  POST /authorization/approve/{id}      — Owner approves (verified biometric/PIN assertion)
+  POST /authorization/deny/{id}         — Owner denies
+  GET  /authorization/{id}              — Check authorization state
 """
 
 import logging
@@ -14,13 +15,17 @@ import logging
 from fastapi import APIRouter, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from backend.app.api.dependencies import SessionContext, get_current_session
+from backend.app.core.errors import NotFoundError
 from backend.app.database.session import get_db
 from backend.app.schemas.schemas import (
+    AuthChallengeResponse,
     AuthorizationApprovalRequest,
     AuthorizationRequest,
     AuthorizationResponse,
 )
 from backend.app.services.authorization_service import AuthorizationService
+from backend.app.services.vault_service import VaultService
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
@@ -29,28 +34,25 @@ router = APIRouter()
 @router.post("/request", summary="Request authorization to access a sensitive value")
 async def request_authorization(
     body: AuthorizationRequest,
+    session_ctx: SessionContext = Depends(get_current_session),
     db: AsyncSession = Depends(get_db),
 ):
     """
     Initiate an authorization request for a sensitive value identified by its synthetic token.
-    Creates a PENDING authorization; owner must explicitly approve or deny.
-
-    REQUEST ≠ AUTHORIZATION. Calling this endpoint does NOT grant access.
+    Enforces that caller has a valid session and token belongs to the authenticated owner.
     """
     auth_svc = AuthorizationService(db)
-
-    # Resolve token → sensitive_value_id
-    from backend.app.services.vault_service import VaultService
     vault = VaultService(db)
+
     token_record = await vault.lookup_by_token(body.synthetic_token)
     if token_record is None:
-        from backend.app.core.errors import NotFoundError
         raise NotFoundError(f"Synthetic token not found: {body.synthetic_token}")
 
     auth = await auth_svc.request_authorization(
         sensitive_value_id=token_record.sensitive_value_id,
         requesting_component=body.requesting_component,
         purpose_scope=body.purpose_scope,
+        owner_id=session_ctx.owner.id,
     )
     return AuthorizationResponse(
         authorization_id=auth.id,
@@ -63,21 +65,46 @@ async def request_authorization(
     )
 
 
-@router.post("/approve/{authorization_id}", summary="Owner approves authorization (biometric/PIN)")
-async def approve_authorization(
+@router.post("/challenge/{authorization_id}", response_model=AuthChallengeResponse, summary="Create owner authentication challenge")
+async def create_authorization_challenge(
     authorization_id: str,
-    body: AuthorizationApprovalRequest,
+    session_ctx: SessionContext = Depends(get_current_session),
     db: AsyncSession = Depends(get_db),
 ):
     """
-    Owner explicitly approves a PENDING authorization after biometric/PIN verification.
-    auth_method must be 'BIOMETRIC' or 'PIN'.
-
-    This endpoint must only be called AFTER the platform layer has verified
-    the biometric/PIN. The backend records the auth_method for audit purposes.
+    Generate a single-use time-bound challenge nonce for biometric/PIN approval.
     """
     auth_svc = AuthorizationService(db)
-    auth = await auth_svc.approve_authorization(authorization_id, body.auth_method)
+    challenge = await auth_svc.create_challenge(authorization_id, session_ctx.owner.id)
+    return AuthChallengeResponse(
+        challenge_id=challenge.challenge_id,
+        owner_id=challenge.owner_id,
+        action=challenge.action,
+        resource_id=challenge.resource_id,
+        nonce=challenge.nonce,
+        expires_at=challenge.expires_at,
+    )
+
+
+@router.post("/approve/{authorization_id}", summary="Owner approves authorization (verified assertion required)")
+async def approve_authorization(
+    authorization_id: str,
+    body: AuthorizationApprovalRequest,
+    session_ctx: SessionContext = Depends(get_current_session),
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    Owner approves a PENDING authorization with verified authentication assertion.
+    Rejects raw claims. Requires verified biometric cryptographic assertion or Argon2id PIN.
+    """
+    auth_svc = AuthorizationService(db)
+    auth = await auth_svc.approve_authorization(
+        authorization_id=authorization_id,
+        auth_method=body.auth_method,
+        challenge_id=body.challenge_id,
+        assertion=body.assertion,
+        owner=session_ctx.owner,
+    )
     return AuthorizationResponse(
         authorization_id=auth.id,
         state=auth.state,
@@ -92,10 +119,11 @@ async def approve_authorization(
 @router.post("/deny/{authorization_id}", summary="Owner denies authorization")
 async def deny_authorization(
     authorization_id: str,
+    session_ctx: SessionContext = Depends(get_current_session),
     db: AsyncSession = Depends(get_db),
 ):
     auth_svc = AuthorizationService(db)
-    auth = await auth_svc.deny_authorization(authorization_id)
+    auth = await auth_svc.deny_authorization(authorization_id, session_ctx.owner.id)
     return AuthorizationResponse(
         authorization_id=auth.id,
         state=auth.state,
@@ -110,11 +138,12 @@ async def deny_authorization(
 @router.get("/{authorization_id}", response_model=AuthorizationResponse)
 async def get_authorization_status(
     authorization_id: str,
+    session_ctx: SessionContext = Depends(get_current_session),
     db: AsyncSession = Depends(get_db),
 ):
-    """Check the current state of an authorization. PENDING requests are expired if timed out."""
+    """Check the current state of an authorization. Scoped to authenticated owner."""
     auth_svc = AuthorizationService(db)
-    auth = await auth_svc.check_authorization(authorization_id)
+    auth = await auth_svc.check_authorization(authorization_id, session_ctx.owner.id)
     return AuthorizationResponse(
         authorization_id=auth.id,
         state=auth.state,
