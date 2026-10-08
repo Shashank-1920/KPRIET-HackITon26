@@ -9,7 +9,7 @@ const API_BASE = "/api/v1";
 // Application State
 const state = {
   token: sessionStorage.getItem("shade_jwt") || "",
-  deviceId: localStorage.getItem("shade_device_id") || "dev-device-node-001",
+  deviceId: localStorage.getItem("shade_device_id") || "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
   ownerMobile: "9876543210",
   currentTab: "dashboard",
   vaultItems: [],
@@ -49,43 +49,78 @@ function switchTab(tabName) {
 
 // Authentication / Auto-Login for Demo
 async function ensureSession() {
-  if (state.token) return true;
+  if (state.token) {
+    try {
+      const chk = await fetch(`${API_BASE}/auth/status`, { headers: getHeaders() });
+      if (chk.ok) {
+        updateStatusBadge(true);
+        return true;
+      }
+    } catch (_) {}
+  }
 
   try {
-    // Attempt registration / auto-login flow for demo readiness
-    const regRes = await fetch(`${API_BASE}/auth/register`, {
+    // 1. First check if a session can be created directly (already registered owner)
+    const directRes = await fetch(`${API_BASE}/session/create`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+    });
+    if (directRes.ok) {
+      const data = await directRes.json();
+      state.token = data.access_token;
+      sessionStorage.setItem("shade_jwt", state.token);
+      updateStatusBadge(true);
+      return true;
+    }
+
+    // 2. If not registered yet, perform full 4-step registration
+    await fetch(`${API_BASE}/auth/register`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         mobile_number: state.ownerMobile,
-        device_fingerprint: state.deviceId,
       }),
     });
-    
-    // Request OTP verification (mock dev code 000000 in dev)
+
     const verifyRes = await fetch(`${API_BASE}/auth/verify-otp`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         mobile_number: state.ownerMobile,
         otp_code: "000000",
-        device_fingerprint: state.deviceId,
-        device_name: "Host Primary Terminal",
       }),
     });
 
     if (verifyRes.ok) {
-      const data = await verifyRes.json();
-      state.token = data.access_token;
-      state.deviceId = data.device_id;
-      sessionStorage.setItem("shade_jwt", state.token);
-      localStorage.setItem("shade_device_id", state.deviceId);
-      updateStatusBadge(true);
-      return true;
+      const verifyData = await verifyRes.json();
+      const bindRes = await fetch(`${API_BASE}/auth/bind-device`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          device_fingerprint_hash: state.deviceId,
+          platform: "windows",
+          verification_ticket: verifyData.verification_ticket,
+        }),
+      });
+
+      if (bindRes.ok) {
+        const sessRes = await fetch(`${API_BASE}/session/create`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+        });
+        if (sessRes.ok) {
+          const sessData = await sessRes.json();
+          state.token = sessData.access_token;
+          sessionStorage.setItem("shade_jwt", state.token);
+          updateStatusBadge(true);
+          return true;
+        }
+      }
     }
   } catch (err) {
     console.warn("Session auto-negotiation deferred:", err);
   }
+  updateStatusBadge(false);
   return false;
 }
 
@@ -133,7 +168,8 @@ async function loadVault() {
   try {
     const res = await fetch(`${API_BASE}/vault/`, { headers: getHeaders() });
     if (res.ok) {
-      state.vaultItems = await res.json();
+      const data = await res.json();
+      state.vaultItems = data.items || (Array.isArray(data) ? data : []);
       renderVaultTable();
     }
   } catch (err) {
@@ -172,13 +208,18 @@ async function openAuthModal(vaultId, token) {
       method: "POST",
       headers: getHeaders(),
       body: JSON.stringify({
-        sensitive_value_id: vaultId,
-        purpose: "Owner interactive decryption request",
-        requester: "S.H.A.D.E. Local UI",
+        synthetic_token: token,
+        requesting_component: "S.H.A.D.E. Local UI",
+        purpose_scope: "Owner interactive decryption request",
       }),
     });
+    if (!reqRes.ok) {
+      const err = await reqRes.json();
+      alert("Authorization request error: " + (err.detail || err.message));
+      return;
+    }
     const authData = await reqRes.json();
-    const authId = authData.auth_id;
+    const authId = authData.authorization_id;
 
     // 2. Fetch cryptographic challenge
     const chalRes = await fetch(`${API_BASE}/authorization/challenge/${authId}`, {
@@ -191,12 +232,13 @@ async function openAuthModal(vaultId, token) {
       authId,
       vaultId,
       token,
-      challenge: challengeData.challenge,
+      challengeId: challengeData.challenge_id,
+      nonce: challengeData.nonce,
     };
 
     // Open Modal
     document.getElementById("auth-modal-token").textContent = token;
-    document.getElementById("auth-modal-challenge").textContent = challengeData.challenge.slice(0, 16) + "...";
+    document.getElementById("auth-modal-challenge").textContent = challengeData.nonce.slice(0, 16) + "...";
     document.getElementById("auth-modal-pin").value = "";
     document.getElementById("auth-modal").classList.add("active");
   } catch (err) {
@@ -218,21 +260,26 @@ async function submitAuthAssertion() {
       method: "POST",
       headers: getHeaders(),
       body: JSON.stringify({
-        auth_assertion: "PIN_VERIFIED",
-        device_pin: pin,
+        auth_method: "PIN",
+        challenge_id: state.activeAuthChallenge.challengeId,
+        assertion: pin,
       }),
     });
 
     if (!approveRes.ok) {
       const err = await approveRes.json();
-      alert("Authentication Denied: " + (err.detail || "Invalid PIN"));
+      alert("Authentication Denied: " + (err.detail || err.message || "Invalid PIN"));
       return;
     }
 
-    // 4. Reveal real value
-    const revealRes = await fetch(`${API_BASE}/vault/${state.activeAuthChallenge.vaultId}/reveal`, {
-      headers: getHeaders(),
-    });
+    // 4. Reveal real value using authenticated vault retrieve
+    const revealRes = await fetch(
+      `${API_BASE}/vault/retrieve?sensitive_value_id=${encodeURIComponent(state.activeAuthChallenge.vaultId)}&authorization_id=${encodeURIComponent(state.activeAuthChallenge.authId)}`,
+      {
+        method: "POST",
+        headers: getHeaders(),
+      }
+    );
 
     if (revealRes.ok) {
       const realData = await revealRes.json();
@@ -340,9 +387,10 @@ Clipboard unaltered:
 // Exposure Search & Monitoring
 async function loadExposures() {
   try {
-    const res = await fetch(`${API_BASE}/exposure/list`, { headers: getHeaders() });
+    const res = await fetch(`${API_BASE}/exposure/`, { headers: getHeaders() });
     if (res.ok) {
-      state.exposures = await res.json();
+      const data = await res.json();
+      state.exposures = data.exposures || (Array.isArray(data) ? data : []);
       renderExposures();
     }
   } catch (err) {
@@ -358,8 +406,8 @@ async function runManualExposureSearch() {
       method: "POST",
       headers: getHeaders(),
       body: JSON.stringify({
-        query_hash: query,
-        search_type: "AADHAAR",
+        search_type: "PASSWORD",
+        search_value_hash: query,
       }),
     });
     if (res.ok) {
@@ -416,7 +464,8 @@ async function loadCases() {
   try {
     const res = await fetch(`${API_BASE}/cases/`, { headers: getHeaders() });
     if (res.ok) {
-      state.cases = await res.json();
+      const data = await res.json();
+      state.cases = data.cases || (Array.isArray(data) ? data : []);
       renderCases();
     }
   } catch (err) {
@@ -432,8 +481,9 @@ async function openCaseFromExposure(expId, org) {
       body: JSON.stringify({
         exposure_id: expId,
         organization: org,
-        affected_data: "AADHAAR",
-        evidence_summary: "Verified breach telemetry from threat engine.",
+        data_type: "PASSWORD",
+        affected_data_description: "Exposed Personal Credentials",
+        evidence: "Verified breach telemetry from threat engine.",
       }),
     });
     if (res.ok) {
@@ -459,7 +509,7 @@ function renderCases() {
         <h3 style="font-size:1.1rem; color:var(--text-primary);">${c.organization} [Case: ${c.id.slice(0,8)}]</h3>
         <span class="badge ${c.status === 'COMPLIED' ? 'badge-low' : 'badge-critical'}">${c.status}</span>
       </div>
-      <p style="font-size:0.82rem; color:var(--text-secondary); margin:0.5rem 0;"><b>Affected Data:</b> ${c.affected_data} | <b>7-Day Deadline:</b> ${new Date(c.deadline_date).toLocaleDateString()}</p>
+      <p style="font-size:0.82rem; color:var(--text-secondary); margin:0.5rem 0;"><b>Affected Data:</b> ${c.data_type || 'Personal Identity Data'} | <b>Created:</b> ${new Date(c.created_at).toLocaleDateString()}</p>
       <div style="margin-top:0.8rem; display:flex; gap:0.5rem;">
         <button class="btn btn-primary" onclick="prepareErasureWorkflow('${c.id}', '${c.organization}')">Prepare Statutory Notice</button>
         <button class="btn" onclick="sendFollowUp('${c.id}')">Follow-up Check</button>
@@ -471,21 +521,21 @@ function renderCases() {
 // 3-Step DPDP Erasure Wizard: Prepare -> Review -> Send
 async function prepareErasureWorkflow(caseId, org) {
   try {
-    const res = await fetch(`${API_BASE}/erasure/prepare`, {
+    const safeOrg = (org || "organization").toLowerCase().replace(/[^a-z0-9]/g, "");
+    const res = await fetch(`${API_BASE}/erasure/`, {
       method: "POST",
       headers: getHeaders(),
       body: JSON.stringify({
         case_id: caseId,
-        organization: org,
-        affected_data: "Personal Identity Data",
-        evidence: "Discovered in leak index by S.H.A.D.E. Threat Radar",
+        dpo_email: `dpo@${safeOrg}.example`,
+        request_body: `Statutory Notice under Section 12 of the Digital Personal Data Protection Act, 2023.\n\nTo Data Protection Officer, ${org}:\n\nWe hereby exercise the Right to Erasure under Section 12(1) and 12(2) of the DPDP Act 2023. You are statutorily required to erase all compromised personal records within 7 days.`,
       }),
     });
     const erasureData = await res.json();
     
     // Show Review modal
     document.getElementById("erasure-review-org").textContent = org;
-    document.getElementById("erasure-review-text").textContent = erasureData.body;
+    document.getElementById("erasure-review-text").textContent = erasureData.request_body;
     document.getElementById("erasure-modal-id").value = erasureData.id;
     document.getElementById("erasure-review-modal").classList.add("active");
   } catch (err) {
@@ -515,6 +565,9 @@ async function sendFollowUp(caseId) {
     const res = await fetch(`${API_BASE}/erasure/${caseId}/followup`, {
       method: "POST",
       headers: getHeaders(),
+      body: JSON.stringify({
+        follow_up_body: "Statutory Follow-up Notice: The 7-day DPDP Act Section 12 statutory timeline has elapsed.",
+      }),
     });
     if (res.ok) {
       alert("Follow-up status recorded.");

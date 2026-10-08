@@ -24,11 +24,29 @@ import hmac
 import secrets
 from typing import Optional
 
+from argon2 import PasswordHasher
+from argon2.exceptions import VerifyMismatchError
 from cryptography.hazmat.primitives.ciphers.aead import AESGCM
 
 from backend.app.core.keystore import get_key_store
 
 _NONCE_SIZE = 12  # bytes — GCM standard
+_ph = PasswordHasher(time_cost=3, memory_cost=65536, parallelism=4)
+
+
+def hash_pin(pin: str) -> str:
+    """Hash a numeric or alphanumeric device PIN using Argon2id."""
+    return _ph.hash(pin)
+
+
+def verify_pin(pin_hash: str, pin: str) -> bool:
+    """Verify a PIN against an Argon2id hash."""
+    try:
+        return _ph.verify(pin_hash, pin)
+    except VerifyMismatchError:
+        return False
+    except Exception:
+        return False
 
 
 def encrypt_value(plaintext: str, key: bytes) -> bytes:

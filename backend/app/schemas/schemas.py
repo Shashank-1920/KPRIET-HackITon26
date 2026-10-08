@@ -355,7 +355,10 @@ class CaseCreateRequest(BaseModel):
     affected_data_description: Optional[str] = Field(
         default=None, description="Human-readable description. Must NOT include plaintext PII."
     )
-    discovery_date: datetime
+    discovery_date: Optional[datetime] = Field(
+        default=None,
+        description="Date when the breach was discovered. Defaults to current time if omitted.",
+    )
     evidence: Optional[str] = None
     unsupported_notes: Optional[str] = Field(
         default=None,
@@ -429,7 +432,7 @@ class ErasureResponseUpdate(BaseModel):
 
 
 class FollowUpRequestCreate(BaseModel):
-    erasure_request_id: str
+    erasure_request_id: Optional[str] = None
     follow_up_body: str
 
 

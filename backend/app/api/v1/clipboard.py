@@ -50,8 +50,17 @@ async def submit_clipboard_content(
     Integration Contract for Member 2 (DLP Engine)
     Processes clipboard content scoped to the active authenticated owner.
     """
-    # If Member 2 found nothing sensitive, pass through unchanged
-    if body.detected_type is None:
+    data_type = None
+    if body.detected_type and body.detected_type.upper() not in ("AUTO_DETECT", "NONE"):
+        data_type = body.detected_type.upper()
+    else:
+        from security.dlp.engine import DLPEngine
+        engine = DLPEngine()
+        detection = engine.inspect(body.content)
+        if detection:
+            data_type = detection.data_type
+
+    if not data_type:
         logger.debug("[Clipboard] No sensitive detection — PASSTHROUGH.")
         return ClipboardSubmitResponse(
             is_sensitive=False,
@@ -60,7 +69,6 @@ async def submit_clipboard_content(
             action="PASSTHROUGH",
         )
 
-    data_type = body.detected_type.upper()
     if data_type not in _SUPPORTED_TYPES:
         data_type = "OTHER"
 

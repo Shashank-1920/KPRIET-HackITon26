@@ -14,6 +14,7 @@ INVARIANTS:
   - Confirmed evidence is clearly separated from unsupported assumptions.
 """
 
+from datetime import datetime, timezone
 import logging
 
 from fastapi import APIRouter, Depends
@@ -54,7 +55,7 @@ async def create_case(
         organization=body.organization,
         data_type=body.data_type,
         affected_data_description=body.affected_data_description,
-        discovery_date=body.discovery_date,
+        discovery_date=body.discovery_date or datetime.now(timezone.utc),
         evidence=body.evidence,
         unsupported_notes=body.unsupported_notes,
         status="OPEN",

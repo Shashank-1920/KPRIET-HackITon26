@@ -195,6 +195,9 @@ async def create_followup(
 ):
     req = await db.get(ErasureRequest, erasure_id)
     if req is None:
+        result_c = await db.execute(select(ErasureRequest).where(ErasureRequest.case_id == erasure_id))
+        req = result_c.scalars().first()
+    if req is None:
         raise NotFoundError("Erasure request not found.")
     case = await db.get(Case, req.case_id)
     if case is None or case.owner_id != session_ctx.owner.id:
