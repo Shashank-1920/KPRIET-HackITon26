@@ -1,0 +1,73 @@
+version: '3.8'
+
+services:
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: shade_backend
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:8000:8000"
+    environment:
+      - SHADE_ENV=production
+      - DATABASE_URL=postgresql+asyncpg://shade_user:shade_password@db:5432/shade_db
+      - REDIS_URL=redis://cache:6379/0
+      - SHADE_MASTER_ENCRYPTION_KEY=${SHADE_MASTER_ENCRYPTION_KEY}
+      - SHADE_JWT_SECRET=${SHADE_JWT_SECRET}
+    depends_on:
+      db:
+        condition: service_healthy
+      cache:
+        condition: service_started
+    networks:
+      - shade_network
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: shade_frontend
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:3000:80"
+    depends_on:
+      - backend
+    networks:
+      - shade_network
+
+  db:
+    image: postgres:16-alpine
+    container_name: shade_postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: shade_user
+      POSTGRES_PASSWORD: shade_password
+      POSTGRES_DB: shade_db
+    volumes:
+      - shade_postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U shade_user -d shade_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - shade_network
+
+  cache:
+    image: redis:7-alpine
+    container_name: shade_redis
+    restart: unless-stopped
+    command: ["redis-server", "--maxmemory", "256mb", "--maxmemory-policy", "volatile-lru"]
+    volumes:
+      - shade_redis_data:/data
+    networks:
+      - shade_network
+
+volumes:
+  shade_postgres_data:
+  shade_redis_data:
+
+networks:
+  shade_network:
+    driver: bridge

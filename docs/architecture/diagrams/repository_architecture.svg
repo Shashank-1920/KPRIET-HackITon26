@@ -1,0 +1,185 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 800" width="100%" height="100%">
+  <defs>
+    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0a0f1d"/>
+      <stop offset="100%" stop-color="#060911"/>
+    </linearGradient>
+    <linearGradient id="cardGradM1" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#111c35"/>
+      <stop offset="100%" stop-color="#0b1326"/>
+    </linearGradient>
+    <linearGradient id="cardGradM2" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#1e1832"/>
+      <stop offset="100%" stop-color="#120e22"/>
+    </linearGradient>
+    <linearGradient id="cardGradM3" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#11282a"/>
+      <stop offset="100%" stop-color="#091819"/>
+    </linearGradient>
+    <linearGradient id="cardGradM4" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#2a1f11"/>
+      <stop offset="100%" stop-color="#181109"/>
+    </linearGradient>
+    <linearGradient id="sharedGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#161b26"/>
+      <stop offset="100%" stop-color="#0e121a"/>
+    </linearGradient>
+    <filter id="glowCyan" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="6" result="blur"/>
+      <feComposite in="SourceGraphic" in2="blur" operator="over"/>
+    </filter>
+  </defs>
+
+  <!-- Background -->
+  <rect width="1200" height="800" fill="url(#bgGrad)"/>
+  <rect x="20" y="20" width="1160" height="760" rx="12" fill="none" stroke="#1f293d" stroke-width="1.5"/>
+
+  <!-- Header -->
+  <text x="600" y="55" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="24" font-weight="800" fill="#00e5ff" text-anchor="middle" letter-spacing="3" filter="url(#glowCyan)">S.H.A.D.E. REPOSITORY ARCHITECTURE</text>
+  <text x="600" y="80" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="12" font-weight="500" fill="#94a3b8" text-anchor="middle" letter-spacing="1">FOUR-MEMBER DECOUPLED MODULE TOPOLOGY &amp; WORKSTREAM BOUNDARIES</text>
+
+  <!-- Central Root Node -->
+  <rect x="475" y="105" width="250" height="50" rx="8" fill="#131e36" stroke="#00e5ff" stroke-width="2"/>
+  <text x="600" y="130" font-family="monospace" font-size="14" font-weight="700" fill="#ffffff" text-anchor="middle">KPRIET-HackITon26 /</text>
+  <text x="600" y="146" font-family="-apple-system, BlinkMacSystemFont, sans-serif" font-size="10" fill="#00e5ff" text-anchor="middle">Git Default Integration Trunk: main</text>
+
+  <!-- Connecting Trunk Lines -->
+  <path d="M 600 155 L 600 190" stroke="#334155" stroke-width="2"/>
+  <path d="M 180 190 L 1020 190" stroke="#334155" stroke-width="2"/>
+  <path d="M 180 190 L 180 220" stroke="#38bdf8" stroke-width="2"/>
+  <path d="M 460 190 L 460 220" stroke="#c084fc" stroke-width="2"/>
+  <path d="M 740 190 L 740 220" stroke="#34d399" stroke-width="2"/>
+  <path d="M 1020 190 L 1020 220" stroke="#fbbf24" stroke-width="2"/>
+
+  <!-- CARD 1: MEMBER 1 (BACKEND) -->
+  <g transform="translate(40, 220)">
+    <rect width="270" height="380" rx="10" fill="url(#cardGradM1)" stroke="#38bdf8" stroke-width="1.5"/>
+    <rect x="0" y="0" width="270" height="36" rx="10" fill="#0284c7" opacity="0.2"/>
+    <text x="135" y="23" font-family="-apple-system, BlinkMacSystemFont, sans-serif" font-size="12" font-weight="700" fill="#38bdf8" text-anchor="middle">MEMBER 1: CORE ARCHITECTURE</text>
+    <text x="135" y="52" font-family="monospace" font-size="12" font-weight="700" fill="#ffffff" text-anchor="middle">backend/ (member-1/backend)</text>
+    
+    <line x1="20" y1="65" x2="250" y2="65" stroke="#1e293b" stroke-width="1"/>
+    
+    <text x="25" y="90" font-family="monospace" font-size="11" fill="#7dd3fc">├── api/ (routes &amp; deps)</text>
+    <text x="25" y="112" font-family="monospace" font-size="11" fill="#7dd3fc">├── core/ (config, logging)</text>
+    <text x="25" y="134" font-family="monospace" font-size="11" fill="#7dd3fc">├── database/ (SQLAlchemy)</text>
+    <text x="25" y="156" font-family="monospace" font-size="11" fill="#7dd3fc">├── models/ (ORM entities)</text>
+    <text x="25" y="178" font-family="monospace" font-size="11" fill="#7dd3fc">├── schemas/ (Pydantic v2)</text>
+    <text x="25" y="200" font-family="monospace" font-size="11" fill="#7dd3fc">├── services/ (orchestration)</text>
+    <text x="25" y="222" font-family="monospace" font-size="11" fill="#7dd3fc">└── main.py (FastAPI app)</text>
+    
+    <rect x="15" y="245" width="240" height="115" rx="6" fill="#081020" stroke="#1e293b"/>
+    <text x="25" y="265" font-family="-apple-system, BlinkMacSystemFont, sans-serif" font-size="10" font-weight="700" fill="#94a3b8">RESPONSIBILITIES &amp; TECH:</text>
+    <text x="25" y="285" font-family="-apple-system, BlinkMacSystemFont, sans-serif" font-size="10" fill="#cbd5e1">• FastAPI ASGI Engine &amp; Router</text>
+    <text x="25" y="303" font-family="-apple-system, BlinkMacSystemFont, sans-serif" font-size="10" fill="#cbd5e1">• PostgreSQL 16 &amp; Async Engine</text>
+    <text x="25" y="321" font-family="-apple-system, BlinkMacSystemFont, sans-serif" font-size="10" fill="#cbd5e1">• Argon2id / JWT Token Guard</text>
+    <text x="25" y="339" font-family="-apple-system, BlinkMacSystemFont, sans-serif" font-size="10" fill="#cbd5e1">• Inter-Module Integration Layer</text>
+  </g>
+
+  <!-- CARD 2: MEMBER 2 (SECURITY) -->
+  <g transform="translate(325, 220)">
+    <rect width="270" height="380" rx="10" fill="url(#cardGradM2)" stroke="#c084fc" stroke-width="1.5"/>
+    <rect x="0" y="0" width="270" height="36" rx="10" fill="#9333ea" opacity="0.2"/>
+    <text x="135" y="23" font-family="-apple-system, BlinkMacSystemFont, sans-serif" font-size="12" font-weight="700" fill="#c084fc" text-anchor="middle">MEMBER 2: SECURITY ENGINE</text>
+    <text x="135" y="52" font-family="monospace" font-size="12" font-weight="700" fill="#ffffff" text-anchor="middle">security/ (member-2/security)</text>
+    
+    <line x1="20" y1="65" x2="250" y2="65" stroke="#2e1065" stroke-width="1"/>
+    
+    <text x="25" y="90" font-family="monospace" font-size="11" fill="#e9d5ff">├── dlp/ (regex &amp; tokenize)</text>
+    <text x="25" y="112" font-family="monospace" font-size="11" fill="#e9d5ff">├── validators/ (Verhoeff)</text>
+    <text x="25" y="134" font-family="monospace" font-size="11" fill="#e9d5ff">├── threat_engine/ (rules)</text>
+    <text x="25" y="156" font-family="monospace" font-size="11" fill="#e9d5ff">├── risk_engine/ (0-100 calc)</text>
+    <text x="25" y="178" font-family="monospace" font-size="11" fill="#e9d5ff">├── breach_radar/ (HIBP)</text>
+    <text x="25" y="200" font-family="monospace" font-size="11" fill="#e9d5ff">└── honeytokens/ (canaries)</text>
+    
+    <rect x="15" y="245" width="240" height="115" rx="6" fill="#130924" stroke="#2e1065"/>
+    <text x="25" y="265" font-family="-apple-system, BlinkMacSystemFont, sans-serif" font-size="10" font-weight="700" fill="#94a3b8">RESPONSIBILITIES &amp; TECH:</text>
+    <text x="25" y="285" font-family="-apple-system, BlinkMacSystemFont, sans-serif" font-size="10" fill="#cbd5e1">• Deterministic Indian Aadhaar / PAN</text>
+    <text x="25" y="303" font-family="-apple-system, BlinkMacSystemFont, sans-serif" font-size="10" fill="#cbd5e1">• Dihedral D5 Verhoeff Checksum</text>
+    <text x="25" y="321" font-family="-apple-system, BlinkMacSystemFont, sans-serif" font-size="10" fill="#cbd5e1">• HIBP Passwords k-Anonymity</text>
+    <text x="25" y="339" font-family="-apple-system, BlinkMacSystemFont, sans-serif" font-size="10" fill="#cbd5e1">• Canary Token Attribution</text>
+  </g>
+
+  <!-- CARD 3: MEMBER 3 (AI / ANOMALY) -->
+  <g transform="translate(605, 220)">
+    <rect width="270" height="380" rx="10" fill="url(#cardGradM3)" stroke="#34d399" stroke-width="1.5"/>
+    <rect x="0" y="0" width="270" height="36" rx="10" fill="#059669" opacity="0.2"/>
+    <text x="135" y="23" font-family="-apple-system, BlinkMacSystemFont, sans-serif" font-size="12" font-weight="700" fill="#34d399" text-anchor="middle">MEMBER 3: AI &amp; ANOMALY</text>
+    <text x="135" y="52" font-family="monospace" font-size="12" font-weight="700" fill="#ffffff" text-anchor="middle">ai/ (member-3/ai)</text>
+    
+    <line x1="20" y1="65" x2="250" y2="65" stroke="#064e3b" stroke-width="1"/>
+    
+    <text x="25" y="90" font-family="monospace" font-size="11" fill="#a7f3d0">├── anomaly/ (outliers)</text>
+    <text x="25" y="112" font-family="monospace" font-size="11" fill="#a7f3d0">├── heuristics/ (Z-score)</text>
+    <text x="25" y="134" font-family="monospace" font-size="11" fill="#a7f3d0">├── models/ (scikit-learn)</text>
+    <text x="25" y="156" font-family="monospace" font-size="11" fill="#a7f3d0">├── analysis/ (explainability)</text>
+    <text x="25" y="178" font-family="monospace" font-size="11" fill="#a7f3d0">└── templates/ (DPDP Sec 12)</text>
+    
+    <rect x="15" y="245" width="240" height="115" rx="6" fill="#061a15" stroke="#064e3b"/>
+    <text x="25" y="265" font-family="-apple-system, BlinkMacSystemFont, sans-serif" font-size="10" font-weight="700" fill="#94a3b8">RESPONSIBILITIES &amp; TECH:</text>
+    <text x="25" y="285" font-family="-apple-system, BlinkMacSystemFont, sans-serif" font-size="10" fill="#cbd5e1">• Statistical Outlier Detection</text>
+    <text x="25" y="303" font-family="-apple-system, BlinkMacSystemFont, sans-serif" font-size="10" fill="#cbd5e1">• Explainable Risk Heuristics</text>
+    <text x="25" y="321" font-family="-apple-system, BlinkMacSystemFont, sans-serif" font-size="10" fill="#cbd5e1">• Gemini Flash DPDP Synthesis</text>
+    <text x="25" y="339" font-family="-apple-system, BlinkMacSystemFont, sans-serif" font-size="10" fill="#cbd5e1">• Masked Prompt Pipelines</text>
+  </g>
+
+  <!-- CARD 4: MEMBER 4 (FRONTEND) -->
+  <g transform="translate(890, 220)">
+    <rect width="270" height="380" rx="10" fill="url(#cardGradM4)" stroke="#fbbf24" stroke-width="1.5"/>
+    <rect x="0" y="0" width="270" height="36" rx="10" fill="#d97706" opacity="0.2"/>
+    <text x="135" y="23" font-family="-apple-system, BlinkMacSystemFont, sans-serif" font-size="12" font-weight="700" fill="#fbbf24" text-anchor="middle">MEMBER 4: UI/UX &amp; WORKFLOW</text>
+    <text x="135" y="52" font-family="monospace" font-size="12" font-weight="700" fill="#ffffff" text-anchor="middle">frontend/ (member-4/frontend)</text>
+    
+    <line x1="20" y1="65" x2="250" y2="65" stroke="#78350f" stroke-width="1"/>
+    
+    <text x="25" y="90" font-family="monospace" font-size="11" fill="#fde68a">├── src/components/ (HUD)</text>
+    <text x="25" y="112" font-family="monospace" font-size="11" fill="#fde68a">├── src/pages/ (Dashboard)</text>
+    <text x="25" y="134" font-family="monospace" font-size="11" fill="#fde68a">├── src/services/ (api.js)</text>
+    <text x="25" y="156" font-family="monospace" font-size="11" fill="#fde68a">├── src/hooks/ (threat feed)</text>
+    <text x="25" y="178" font-family="monospace" font-size="11" fill="#fde68a">├── public/ (assets, icons)</text>
+    <text x="25" y="200" font-family="monospace" font-size="11" fill="#fde68a">└── package.json (React 19)</text>
+    
+    <rect x="15" y="245" width="240" height="115" rx="6" fill="#1c1206" stroke="#78350f"/>
+    <text x="25" y="265" font-family="-apple-system, BlinkMacSystemFont, sans-serif" font-size="10" font-weight="700" fill="#94a3b8">RESPONSIBILITIES &amp; TECH:</text>
+    <text x="25" y="285" font-family="-apple-system, BlinkMacSystemFont, sans-serif" font-size="10" fill="#cbd5e1">• React 19 + Vite + Vanilla CSS</text>
+    <text x="25" y="303" font-family="-apple-system, BlinkMacSystemFont, sans-serif" font-size="10" fill="#cbd5e1">• Cyber SOC War-Room Dashboard</text>
+    <text x="25" y="321" font-family="-apple-system, BlinkMacSystemFont, sans-serif" font-size="10" fill="#cbd5e1">• SVG Exposome Threat Meter</text>
+    <text x="25" y="339" font-family="-apple-system, BlinkMacSystemFont, sans-serif" font-size="10" fill="#cbd5e1">• Interactive Sandbox &amp; Voice HUD</text>
+  </g>
+
+  <!-- SHARED INFRASTRUCTURE / PLANNED ROW -->
+  <g transform="translate(40, 620)">
+    <rect width="1120" height="135" rx="10" fill="url(#sharedGrad)" stroke="#334155" stroke-width="1.5"/>
+    <text x="20" y="25" font-family="-apple-system, BlinkMacSystemFont, sans-serif" font-size="11" font-weight="700" fill="#38bdf8" letter-spacing="1">SHARED INTEGRATION &amp; INFRASTRUCTURE DIRECTORIES</text>
+    
+    <!-- Voice -->
+    <rect x="20" y="40" width="190" height="75" rx="6" fill="#0f172a" stroke="#1e293b"/>
+    <text x="30" y="60" font-family="monospace" font-size="11" font-weight="700" fill="#f43f5e">voice/ (Planned)</text>
+    <text x="30" y="78" font-family="-apple-system, BlinkMacSystemFont, sans-serif" font-size="9.5" fill="#94a3b8">• Porcupine Wake-Word</text>
+    <text x="30" y="95" font-family="-apple-system, BlinkMacSystemFont, sans-serif" font-size="9.5" fill="#94a3b8">• Vosk STT + Pyttsx3 TTS</text>
+    
+    <!-- Tests -->
+    <rect x="225" y="40" width="200" height="75" rx="6" fill="#0f172a" stroke="#1e293b"/>
+    <text x="235" y="60" font-family="monospace" font-size="11" font-weight="700" fill="#38bdf8">tests/ (Shared)</text>
+    <text x="235" y="78" font-family="-apple-system, BlinkMacSystemFont, sans-serif" font-size="9.5" fill="#94a3b8">• tests/backend, security</text>
+    <text x="235" y="95" font-family="-apple-system, BlinkMacSystemFont, sans-serif" font-size="9.5" fill="#94a3b8">• tests/ai, integration</text>
+
+    <!-- Docs -->
+    <rect x="440" y="40" width="220" height="75" rx="6" fill="#0f172a" stroke="#1e293b"/>
+    <text x="450" y="60" font-family="monospace" font-size="11" font-weight="700" fill="#38bdf8">docs/ (Architecture)</text>
+    <text x="450" y="78" font-family="-apple-system, BlinkMacSystemFont, sans-serif" font-size="9.5" fill="#94a3b8">• ARCHITECTURE.md (Master)</text>
+    <text x="450" y="95" font-family="-apple-system, BlinkMacSystemFont, sans-serif" font-size="9.5" fill="#94a3b8">• REPOSITORY_STRUCTURE.md</text>
+
+    <!-- Scripts -->
+    <rect x="675" y="40" width="180" height="75" rx="6" fill="#0f172a" stroke="#1e293b"/>
+    <text x="685" y="60" font-family="monospace" font-size="11" font-weight="700" fill="#38bdf8">scripts/ (Utilities)</text>
+    <text x="685" y="78" font-family="-apple-system, BlinkMacSystemFont, sans-serif" font-size="9.5" fill="#94a3b8">• dev_setup.ps1</text>
+    <text x="685" y="95" font-family="-apple-system, BlinkMacSystemFont, sans-serif" font-size="9.5" fill="#94a3b8">• seed_demo_data.py</text>
+
+    <!-- Root Config Files -->
+    <rect x="870" y="40" width="230" height="75" rx="6" fill="#0f172a" stroke="#1e293b"/>
+    <text x="880" y="60" font-family="monospace" font-size="11" font-weight="700" fill="#38bdf8">Root Config &amp; Deploy</text>
+    <text x="880" y="78" font-family="-apple-system, BlinkMacSystemFont, sans-serif" font-size="9.5" fill="#94a3b8">• .env.example (Config contract)</text>
+    <text x="880" y="95" font-family="-apple-system, BlinkMacSystemFont, sans-serif" font-size="9.5" fill="#94a3b8">• docker-compose.yml / README</text>
+  </g>
+</svg>
