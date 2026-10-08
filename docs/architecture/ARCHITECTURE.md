@@ -1,99 +1,58 @@
 # S.H.A.D.E. — Master Architecture & Secure System Design Blueprint
-**Synthetic Host for Anonymization, Detection & Enforcement**  
-*Document Version: 2.0.0 | Status: LOCAL-FIRST PRIVACY BLUEPRINT | Date: October 2026*  
-*Repository: Shashank-1920/KPRIET-HackITon26 | Workstream: Member 1 (Core Architecture + Backend + Database + Integration)*
+**Synthetic Host for Automated Data Extractor (Anonymization, Detection & Enforcement)**  
+*Document Version: 2.1.0 | Status: APPROVED LOCAL-FIRST ARCHITECTURE BASELINE | Date: October 2026*  
+*Repository: Shashank-1920/KPRIET-HackITon26 | Workstream: Shared 4-Member Baseline*
 
 ---
 
-## 1. Project Overview & Core Philosophy
+## 1. System Overview
 
-**S.H.A.D.E.** (**S**ynthetic **H**ost for **A**nonymization, **D**etection & **E**nforcement) is fundamentally a:
-- **LOCAL-FIRST**
-- **PRIVACY-FIRST**
-- **DEVICE-LOCAL**
-- **SECURITY-FIRST**
+**S.H.A.D.E.** (**S**ynthetic **H**ost for **A**utomated **D**ata **E**xtractor) is a **local-first, privacy-first, device-local, security-first** personal security operations center and data cloaking intermediary.
 
-personal security operations center and data cloaking vault.
+### Core Architecture Axiom: Real Sensitive Data Stays Local
+In traditional cloud architectures, user credentials and Personal Identifiable Information (PII) are stored on remote cloud databases, creating centralized breach targets. S.H.A.D.E. inverts this model:
+- **Authoritative Store is Device-Local**: The owner's physical computer is the sole authoritative repository for real sensitive data (Aadhaar, PAN, credentials, private keys) and cryptographic token mappings.
+- **Local Encrypted Vault**: Sensitive data is persisted strictly inside a device-local encrypted SQLite database (e.g., SQLCipher). S.H.A.D.E. is **not** a cloud database application.
+- **Synthetic Tokenization**: External services and third-party cloud LLMs receive **only** synthetic representations (e.g., `<SYN_AADHAAR_7F29>`).
+- **Owner Authorization & Local Rehydration**: Rehydrating synthetic tokens back into real data occurs exclusively on the local machine and requires explicit, interactive owner consent.
 
-### Core Architectural Principle: Real Sensitive Data Stays Local
-In traditional architectures, user credentials and PII are uploaded to centralized cloud databases, creating single points of failure and massive breach liability. S.H.A.D.E. rejects this paradigm.
-
-**The owner's physical device is the authoritative location for the user's sensitive real data and its cryptographic synthetic mappings.** S.H.A.D.E. is **not** a cloud database application. Real sensitive values (Aadhaar numbers, PAN cards, passwords, private keys) are persisted strictly inside an **encrypted, device-local SQLite database** (e.g., SQLCipher). External services and cloud LLMs receive **only** synthetic representations (e.g., `<SYN_AADHAAR_7F29>`). Rehydrating synthetic tokens back into real data is performed exclusively on the local machine and requires explicit, interactive owner authorization.
-
-S.H.A.D.E. implements a 5-phase defense lifecycle:
-1. **PREVENT (Real-Time DLP)**: Deterministic client/edge interception replacing PII and secrets with synthetic tokens (`<SYN_AADHAAR_xxxx>`) before data leaves the host.
-2. **DETECT (Data Extractor & Breach Radar)**: Local privacy-preserving k-anonymity breach detection and broker surveillance calculating a dynamic 0–100 Exposome Threat Index.
-3. **CLOAK (Synthetic Host & Honey-Tokens)**: Autonomous decoy credentials and trackable canary tokens establishing cryptographic leak attribution when third parties suffer breaches.
-4. **ENFORCE (Statutory Takedown)**: Automated DPDP Act 2023 Section 12 legal notice synthesis, compiling structured fiduciary complaints for 1-click legal dispatch.
-5. **INTERACTION (Ambient War-Room HUD & Voice)**: Cyberpunk-styled operations dashboard with owner permission controls and offline failover guarantees.
+```
+REAL SENSITIVE DATA ──▶ LOCAL S.H.A.D.E. VAULT ──▶ ENCRYPTED LOCAL STORAGE ──▶ SYNTHETIC TOKEN
+                                                                                       │
+USER ◀── LOCAL REHYDRATION ◀── OWNER PERMISSION ◀── TOKEN DETECTION ◀── SYNTHETIC RESPONSE ◀┘
+```
 
 ---
 
-## 2. Architecture Goals
+## 2. Design Principles
 
-- **Device-Authoritative Persistence**: The user's device is the authoritative source of truth. No central server or cloud database stores the user's real plaintext records.
-- **Zero-Trust Between Modules**: Every internal and external service communication validates schemas, enforces least privilege, and canonicalizes inputs.
-- **Deterministic-First Security**: Critical security decisions, PII tokenization, and credential validation rely on deterministic, explainable mathematical rules (e.g., Verhoeff checksums, regex state machines) rather than probabilistic AI models.
-- **Owner-Controlled Permission Gate**: Rehydration of synthetic tokens to real data requires explicit, granular, time-limited owner consent.
-- **Fail-Safe & Resilient (Venue Wi-Fi Shield)**: The system operates 100% offline using local encrypted SQLite storage, local regex rules, and local mock datasets.
-- **Sub-15ms Edge Interception**: DLP evaluation and tokenization pipelines execute within <15ms to allow real-time prompt/clipboard filtering without user friction.
-
----
-
-## 3. Security Goals & Exposure Reduction
-
-> **Important Security Principle**: S.H.A.D.E. does not claim "unbreakable" encryption or "zero risk." Rather, S.H.A.D.E. mathematically and architecturally **reduces exposure** by ensuring real sensitive data remains local and encrypted, while only synthetic representations are exposed externally.
-
-- **Confidentiality**: Plaintext PII, raw passwords, secret keys, and database encryption keys never traverse untrusted network boundaries or appear in logs.
-- **Integrity**: Every transaction, event, and audit record maintains tamper-evident integrity using monotonic timestamps, UUIDv7 identifiers, and HMAC-SHA256 signatures.
-- **Availability**: System resources are shielded against denial-of-service, algorithmic complexity attacks, and brute-force enumeration via sliding-window rate limiting.
-- **Data Minimization (Privacy by Design)**: Collect only what is mathematically necessary. If an identifier does not need to be stored, it is discarded immediately after verification.
-- **Auditability Without Leaks**: Comprehensive structured security event auditing that logs sanitization metadata and token references while strictly redacting raw sensitive payloads.
+1. **Local-First Authority**: The device owner retains absolute sovereignty over their data.
+2. **Least Privilege**: Components receive only the minimum data required for their specific purpose.
+3. **Zero-Trust Between Modules**: Every internal and external boundary enforces strict Pydantic v2 schemas.
+4. **Deterministic Security Decisions**: High-stakes security actions and PII detection rely on deterministic mathematics (e.g., Dihedral D5 Verhoeff checksums), not probabilistic AI.
+5. **Fail-Safe Offline Operation (Venue Wi-Fi Shield)**: The entire core lifecycle executes offline using local encrypted SQLite storage, local heuristics, and local mock datasets.
+6. **Data Minimization & Exposure Reduction**: S.H.A.D.E. reduces exposure by keeping real data local and sending synthetic representations externally.
 
 ---
 
-## 4. Final Security-First Technology Stack
+## 3. Component Architecture
 
-| Layer | Target Technology | Version | Role & Justification in S.H.A.D.E. |
-| :--- | :--- | :--- | :--- |
-| **Frontend UI/UX** | React + Vite | 19.x / 6.x | High-performance reactive War-Room HUD, permission approval modal, zero bloat. |
-| **Frontend Styling** | Vanilla CSS | CSS3 / Custom Variables | Dark-mode glassmorphic cyberpunk styling, pixel-perfect control, zero framework lock-in. |
-| **Frontend Icons** | Lucide React | Latest | Clean, lightweight SVG iconography for SOC threat meters and alert cards. |
-| **Backend Framework** | Python + FastAPI | 3.12+ / 0.136+ | Asynchronous ASGI runtime, native Pydantic v2 schema enforcement, sub-millisecond routing. |
-| **ASGI Server** | Uvicorn | 0.34+ | Production-grade asynchronous HTTP/1.1 and WebSocket server. |
-| **HTTP Client** | HTTPX | 0.28+ | Async HTTP client configured with strict timeout budgets and destination allowlists. |
-| **Data Validation** | Pydantic | 2.10+ | Strict type validation, serialization, and contract verification across all boundaries. |
-| **Primary Data Vault** | **Encrypted SQLite (SQLCipher)** | 3.45+ / 4.x | **Authoritative local encrypted database.** Stores encrypted real values and synthetic mappings locally. Zero cloud DB dependency. |
-| **Key Storage Boundary**| **SecureKeyStore Abstraction** | Native OS APIs | Platform-native secure key storage: Windows DPAPI, macOS Keychain, Linux Secret Service. |
-| **ORM & Persistence** | SQLAlchemy | 2.0+ | Async ORM mappings, typed queries, parameterization, and local schema management. |
-| **Ephemeral State** | In-Memory / Optional Redis | 7.x (Optional) | Rate limiting and replay protection. Defaults to in-memory sliding-window; Redis is optional. |
-| **Password Hashing** | Argon2id (`argon2-cffi`)| 23.x | Memory-hard, timing-attack-resistant modern password hashing standard (never SHA-256). |
-| **Cryptography** | `cryptography` (AES-256-GCM)| 43.x | Authenticated encryption for persistent sensitive vaults using CSPRNG nonces. |
-| **DLP & Checksums** | Python `re` + Verhoeff Engine | Native StdLib | Mathematically exact Indian Aadhaar, PAN, and secret-key deterministic interception. |
-| **Breach Intelligence**| HIBP Passwords API v3 | REST (k-anonymity) | Privacy-preserving password exposure queries using 5-character SHA-1 hash prefixes only. |
-| **AI / Legal Engine** | Google Gemini 2.5 Flash / Ollama | Flash / Phi-3 | Structured DPDP Act Section 12 legal takedown drafting (operates strictly on masked data). |
-| **Testing** | Pytest + pytest-asyncio | 8.x / 0.24+ | Comprehensive asynchronous unit, integration, and security fuzzing test execution. |
-
----
-
-## 5. Required Architectural Diagrams
-
-### Diagram 1: Local-First S.H.A.D.E. Architecture
 ```mermaid
 flowchart TB
     subgraph OwnerDevice["Owner's Physical Device (Authoritative Local Boundary)"]
         UI["React 19 Cyber War-Room HUD<br/>(Member 4)"]
+        VoiceSubsystem["Ambient Voice Daemon<br/>(Porcupine / Vosk / Pyttsx3)"]
         FastAPI["FastAPI API Gateway<br/>(Member 1)"]
-        DLP["Deterministic DLP Engine<br/>(Member 2)"]
-        TokenEngine["Synthetic Tokenizer & Rehydrator<br/>(Member 1 / Member 2)"]
-        PermGate["Owner Permission Gate<br/>(Member 1)"]
         
-        subgraph LocalVault["Local Encrypted Vault"]
+        subgraph LocalVault["Local Encrypted Vault (Member 1)"]
             SQLCipher[("Local Encrypted Database<br/>(SQLCipher / SQLite)")]
-            KeyStore["SecureKeyStore<br/>(OS DPAPI / Keychain)"]
+            KeyStore["SecureKeyStore<br/>(Windows DPAPI / macOS Keychain / Linux Secret Service)"]
             KeyStore -.->|Injects Key to RAM| SQLCipher
         end
         
+        DLP["Deterministic DLP Engine<br/>(Member 2)"]
+        TokenEngine["Synthetic Tokenizer & Rehydrator<br/>(Member 1 / Member 2)"]
+        PermGate["Owner Permission Gate<br/>(Member 1)"]
         SecurityEngine["Security & Threat Engine<br/>(Member 2)"]
         AnomalyEngine["Statistical Anomaly Engine<br/>(Member 3)"]
         RiskEngine["Deterministic Risk Engine<br/>(Member 2)"]
@@ -106,6 +65,7 @@ flowchart TB
     end
 
     UI -->|Local HTTP 127.0.0.1| FastAPI
+    VoiceSubsystem -->|Local REST| FastAPI
     FastAPI --> DLP --> TokenEngine
     TokenEngine -->|Token Mappings| SQLCipher
     TokenEngine -->|ONLY Synthetic Data &lt;SYN_...&gt;| ExternalLLM
@@ -119,111 +79,54 @@ flowchart TB
 
 ---
 
-### Diagram 2: Local Encrypted Data Vault
+## 4. Repository Ownership
+
+The repository is partitioned into four decoupled workstreams corresponding to the four team members:
+
+| Member | Assigned Role | Primary Git Branch | Directory Ownership | Core Responsibilities |
+| :--- | :--- | :--- | :--- | :--- |
+| **Member 1** | Core Architecture + Backend + Database + Integration | `member-1/backend` | `backend/`, `docs/`, `docker-compose.yml`, `.env.example` | FastAPI ASGI application, local encrypted database (SQLCipher), `SecureKeyStore` abstraction, token mapping, permission gate, integration contracts. |
+| **Member 2** | Security + Threat Engine + Risk Analysis | `member-2/security` | `security/`, `tests/security/` | Deterministic DLP regex, Verhoeff checksums, synthetic token generation, canary honeytokens, HIBP k-anonymity client, 0–100 Exposome Threat Index. |
+| **Member 3** | AI/ML + Detection + Anomaly Analysis | `member-3/ai` | `ai/`, `tests/ai/` | Statistical anomaly detection (Z-score), PII density heuristics, prompt injection filtering, DPDP Act 2023 Section 12 legal notice generation (masked data only). |
+| **Member 4** | Frontend + UI/UX + User Workflow | `member-4/frontend` | `frontend/`, `voice/`, `tests/frontend/` | React 19 Cyber War-Room HUD, SVG threat gauge, live sandbox, owner approval modal, voice interaction HUD. |
+| **Shared** | All Members | `main` | `tests/integration/`, `scripts/`, `README.md` | Baseline integration, cross-module testing, repository setup scripts. |
+
+---
+
+## 5. Data Flow
+
 ```mermaid
 flowchart TD
-    subgraph KeyManagement["Key Management Boundary (OS Level)"]
-        OSKey["OS Credential Vault<br/>(Windows DPAPI / macOS Keychain / Linux Secret Service)"]
-        MemKey["RAM Master Key (32 Bytes AES-GCM)"]
-        OSKey -->|Loaded at Startup| MemKey
-    end
-
-    subgraph EncryptedVault["Local Encrypted SQLite Database (.db)"]
-        SQLC["SQLCipher Encryption Engine (Page-Level AES-256-CBC / GCM)"]
-        
-        subgraph Tables["Encrypted Relational Tables"]
-            T1["token_mappings (Encrypted Real Values ↔ Synthetic Tokens)"]
-            T2["permission_requests (Owner Approval States)"]
-            T3["audit_logs (Sanitized Event Metadata)"]
-            T4["canary_tokens (Decoy Credentials & Leak Attribution)"]
-            T5["takedown_notices (DPDP Section 12 Requisitions)"]
-        end
-        
-        MemKey --> SQLC
-        SQLC --> Tables
-    end
-
-    Tables -.->|Plaintext NEVER exists on disk| Disk[("Encrypted File on Host Disk")]
+    Step1["1. User Input (Prompt / Form / Clipboard)"] --> Step2["2. Local FastAPI Ingress (127.0.0.1:8000)"]
+    Step2 --> Step3["3. Rate Limiter (Local In-Memory Sliding Window)"]
+    Step3 --> Step4["4. Input Canonicalization & Pydantic Validation"]
+    Step4 --> Step5{"5. Deterministic DLP Scan<br/>(Verhoeff Checksum + Regex Suite)"}
+    
+    Step5 -->|Sensitive PII / Secret Found| Step6a["6a. Mask & Generate Synthetic Token<br/>e.g., &lt;SYN_AADHAAR_7F29&gt;"]
+    Step5 -->|Clean Payload| Step6b["6b. Clean Stream"]
+    
+    Step6a --> Step7["7. Store Mapping in Local Encrypted Vault<br/>(Token ↔ Encrypted Real Data)"]
+    Step6a --> Step8["8. Outbound Stream (Contains ONLY Synthetic Token)"]
+    Step6b --> Step8
+    
+    Step8 --> Step9["9. External Cloud AI / Web Service (Gemini Flash)<br/>Plaintext NEVER touches the network"]
+    Step9 --> Step10["10. External Response (Contains &lt;SYN_AADHAAR_7F29&gt;)"]
+    
+    Step10 --> Step11["11. Local Token Detection"]
+    Step11 --> Step12{"12. Owner Permission Gate<br/>Authorize Rehydration?"}
+    
+    Step12 -->|Owner Consents| Step13a["13a. Decrypt Locally via OS Master Key"]
+    Step12 -->|Owner Denies / Times Out| Step13b["13b. Retain Synthetic Token Display"]
+    
+    Step13a --> Step14["14. Render Real Value to Local Screen"]
+    Step13b --> Step14
+    Step14 --> Step15["15. Sanitized Local Audit Log (Zero Plaintext Secrets)"]
 ```
 
 ---
 
-### Diagram 3: Synthetic Token ↔ Encrypted Real-Data Mapping
-```mermaid
-classDiagram
-    class SyntheticTokenMapping {
-        +UUID token_id
-        +String synthetic_token "<SYN_AADHAAR_7F29>"
-        +String data_type "AADHAAR | PAN | API_KEY | PASSWORD"
-        +Bytes encrypted_real_value "AES-256-GCM Ciphertext"
-        +Bytes nonce "12-Byte CSPRNG Nonce"
-        +String owner_device_id "Unique Host Identifier"
-        +DateTime created_at "Monotonic UTC Timestamp"
-        +DateTime expires_at "Optional Expiration"
-        +String status "ACTIVE | REVOKED | EXPIRED"
-        +JSON rehydration_metadata "Display format & context"
-    }
+## 6. Tokenization Flow
 
-    class PermissionRequest {
-        +UUID request_id
-        +UUID token_id
-        +String requesting_component "e.g., web_form_autofill"
-        +String purpose_scope "e.g., KYC submission"
-        +String permission_state "PENDING | APPROVED | DENIED | EXPIRED"
-        +DateTime requested_at
-        +DateTime resolved_at
-    }
-
-    class SanitizedAuditLog {
-        +UUID audit_id
-        +String request_id
-        +String token_id "<SYN_AADHAAR_7F29>"
-        +String action "TOKENIZE | REHYDRATE | REVOKE"
-        +String permission_result "APPROVED | DENIED"
-        +JSON metadata_sanitized "NO PLAINTEXT SECRETS"
-    }
-
-    SyntheticTokenMapping "1" -- "0..*" PermissionRequest : governed by
-    PermissionRequest "1" -- "1" SanitizedAuditLog : audited in
-```
-
----
-
-### Diagram 4: Permission / Owner Authorization Flow
-```mermaid
-sequenceDiagram
-    autonumber
-    actor Requestor as Requesting Component (UI / App)
-    participant Gate as Permission Gate (Backend)
-    actor Owner as Device Owner (Interactive Prompt)
-    participant Vault as Local Encrypted Vault
-
-    Requestor->>Gate: Request Access to Real Data (token_id, purpose, scope)
-    Gate->>Gate: Verify Token State (ACTIVE?)
-    Gate->>Gate: Create PermissionRequest (State: PENDING)
-    Gate->>Owner: Display Permission Modal: "Allow Access to Aadhaar for KYC?"
-    Note over Owner: Review: Requestor, Purpose, Time Limit
-    alt Owner Consents (APPROVED)
-        Owner->>Gate: Approve Request (State: APPROVED)
-        Gate->>Vault: Read Encrypted Real Value
-        Vault-->>Gate: Ciphertext + Nonce
-        Gate->>Gate: Decrypt locally with RAM Master Key
-        Gate-->>Requestor: Return Minimum Required Plaintext
-        Gate->>Vault: Audit Log (Action: REHYDRATE, Result: APPROVED)
-    else Owner Rejects (DENIED)
-        Owner->>Gate: Reject Request (State: DENIED)
-        Gate-->>Requestor: Permission Denied (Return Synthetic Token)
-        Gate->>Vault: Audit Log (Action: REHYDRATE, Result: DENIED)
-    else Request Times Out (EXPIRED)
-        Gate->>Gate: Mark State: EXPIRED (Fails Closed)
-        Gate-->>Requestor: Request Timed Out
-        Gate->>Vault: Audit Log (Action: REHYDRATE, Result: EXPIRED)
-    end
-```
-
----
-
-### Diagram 5: Tokenization Flow
 ```mermaid
 sequenceDiagram
     autonumber
@@ -231,41 +134,43 @@ sequenceDiagram
     participant DLP as DLP Interceptor (Regex + Verhoeff)
     participant Tokenizer as Synthetic Tokenizer
     participant Vault as Local Encrypted Vault
-    participant Key as SecureKeyStore
+    participant KeyStore as SecureKeyStore
 
-    User->>DLP: Enters text containing "2668 5333 9452"
+    User->>DLP: Enters text containing Aadhaar: "2668 5333 9452"
     DLP->>DLP: Regex match + Dihedral D5 Verhoeff checksum: VALID!
     DLP->>Tokenizer: Trigger Synthetic Replacement
-    Tokenizer->>Key: Request Master Encryption Key
-    Key-->>Tokenizer: 32-Byte AES-GCM Key (in RAM)
-    Tokenizer->>Tokenizer: Generate Nonce (12 Bytes) & Encrypt Real Value
+    Tokenizer->>KeyStore: Request Master Encryption Key
+    KeyStore-->>Tokenizer: 32-Byte AES-GCM Key (in RAM)
+    Tokenizer->>Tokenizer: Generate 12-Byte CSPRNG Nonce
+    Tokenizer->>Tokenizer: Encrypt Real Value via AES-256-GCM
     Tokenizer->>Tokenizer: Generate Synthetic Token: <SYN_AADHAAR_7F29>
     Tokenizer->>Vault: INSERT INTO token_mappings (token_id, <SYN_AADHAAR_7F29>, ciphertext, nonce)
     Tokenizer-->>User: Emits Safe String: "<SYN_AADHAAR_7F29>"
-    Note over User: Plaintext NEVER leaves the host device!
+    Note over User: Real plaintext NEVER leaves the host device!
 ```
 
 ---
 
-### Diagram 6: Local Rehydration Flow
+## 7. Rehydration Flow
+
 ```mermaid
 sequenceDiagram
     autonumber
-    actor Ext as External Service / Response
+    actor External as External Response
     participant Backend as Local S.H.A.D.E. Backend
     participant Detector as Token Detector
     participant Gate as Permission Gate
     actor Owner as Local Owner
     participant Vault as Local Encrypted Vault
 
-    Ext->>Backend: Inbound text: "Document verified for <SYN_AADHAAR_7F29>"
+    External->>Backend: Inbound text: "Document verified for <SYN_AADHAAR_7F29>"
     Backend->>Detector: Scan for Synthetic Token Format (<SYN_...>)
     Detector-->>Backend: Found Token: <SYN_AADHAAR_7F29>
     Backend->>Gate: Verify Authorization for Rehydration
     Gate->>Owner: Prompt: "Rehydrate Aadhaar number on your screen?"
-    Owner->>Gate: Grant Permission
+    Owner->>Gate: Grant Permission (APPROVED)
     Gate->>Vault: Query mapping for <SYN_AADHAAR_7F29>
-    Vault-->>Gate: Encrypted Record
+    Vault-->>Gate: Encrypted Record (Ciphertext + Nonce)
     Gate->>Gate: Decrypt with OS Key in RAM
     Gate-->>Owner: Render: "Document verified for 2668 5333 9452"
     Note over Backend: External service has ZERO awareness of real value!
@@ -273,28 +178,36 @@ sequenceDiagram
 
 ---
 
-### Diagram 7: External AI Safe-Transmission Flow
-```mermaid
-sequenceDiagram
-    autonumber
-    actor User as User
-    participant LocalHost as S.H.A.D.E. Local Host
-    participant DLP as Deterministic DLP
-    participant ExternalLLM as Cloud AI (Google Gemini 2.5 Flash)
+## 8. Permission Flow & State Machine
 
-    User->>LocalHost: "Summarize contract for Aadhaar 2668 5333 9452 and PAN ABCDE1234F"
-    LocalHost->>DLP: Intercept Prompt
-    Note over DLP: Detect Aadhaar (Verhoeff) + PAN (Regex)
-    DLP->>LocalHost: Replace with <SYN_AADHAAR_7F29> and <SYN_PAN_44A1>
-    LocalHost->>ExternalLLM: POST /v1beta/models/gemini-flash:generateContent<br/>"Summarize contract for <SYN_AADHAAR_7F29> and <SYN_PAN_44A1>"
-    Note over ExternalLLM: Cloud AI sees ONLY synthetic tokens!
-    ExternalLLM-->>LocalHost: "The contract for <SYN_AADHAAR_7F29> is valid..."
-    LocalHost-->>User: Display response (with optional local rehydration)
+Access to real sensitive data requires explicit, granular owner consent. Synthetic data may flow externally, but rehydration is strictly guarded:
+
+```mermaid
+stateDiagram-v2
+    [*] --> PENDING: Rehydration Request Generated
+    PENDING --> APPROVED: Owner Explicitly Consents
+    PENDING --> DENIED: Owner Rejects Request
+    PENDING --> EXPIRED: Request Timeout (Fails Closed)
+    APPROVED --> REVOKED: Owner Terminates Access
+    APPROVED --> [*]: Access Window Concluded
+    DENIED --> [*]: Synthetic Token Retained
+    EXPIRED --> [*]: Synthetic Token Retained
+    REVOKED --> [*]: Key Session Destroyed
 ```
+
+### Permission Attributes:
+- **Token ID**: Identifies the specific synthetic token requested.
+- **Requesting Component**: Identifies which client/application requested access.
+- **Purpose / Scope**: Documented business justification (e.g., KYC submission).
+- **Time Limit**: Strict expiration budget (e.g., 60 seconds).
+- **Audit Record**: Every decision generates a sanitized audit log entry.
 
 ---
 
-### Diagram 8: Secure Key-Storage Boundary
+## 9. Secure Key Architecture (`SecureKeyStore`)
+
+Database encryption keys must **never** reside inside the database file or in git commits.
+
 ```mermaid
 graph TD
     subgraph HostOS["Host Operating System Secure Key Boundary"]
@@ -322,208 +235,149 @@ graph TD
     end
 ```
 
+### Key Management Rules:
+1. **Zero Key Persistence in Repo**: Keys exist exclusively in the OS keystore and process RAM.
+2. **Platform Abstraction**: S.H.A.D.E. defines `SecureKeyStore` with concrete platform adapters for Windows, macOS, and Linux.
+
 ---
 
-### Diagram 9: Complete Repository Architecture
+## 10. Database Architecture
+
+### 10.1 Primary Local Encrypted Vault (SQLCipher)
+- **Authoritative Database**: Local embedded **encrypted SQLite** database (SQLCipher / AES-256 encrypted SQLite).
+- **Storage Path**: `./data/shade_vault.db` on host disk.
+- **Zero Plaintext Storage**: Plaintext sensitive values (Aadhaar, PAN, passwords) are never stored in an unencrypted file.
+- **Page-Level Encryption**: 256-bit AES with per-page HMAC-SHA512 tamper verification.
+
+### 10.2 Relational Data Model
 ```mermaid
-graph TD
-    subgraph Root["KPRIET-HackITon26 / (Git Branch: member-1/backend)"]
-        subgraph M1["MEMBER 1: Core Architecture + Backend + Local Vault"]
-            B1["backend/api/ (Routes & Auth Guards)"]
-            B2["backend/database/ (Local Encrypted SQLite)"]
-            B3["backend/keystore/ (SecureKeyStore Abstraction)"]
-            B4["backend/models/ (token_mapping.py, permission.py)"]
-            B5["backend/schemas/ (Pydantic v2 Contracts)"]
-            B6["backend/main.py (FastAPI App)"]
-        end
+erDiagram
+    TOKEN_MAPPINGS ||--o{ PERMISSION_REQUESTS : governs
+    PERMISSION_REQUESTS ||--o{ AUDIT_LOGS : produces
+    TOKEN_MAPPINGS ||--o{ CANARY_TOKENS : associates
+    CANARY_TOKENS ||--o{ TAKEDOWN_NOTICES : triggers
 
-        subgraph M2["MEMBER 2: Security + Threat Engine + Risk Analysis"]
-            S1["security/dlp/ (Regex Suite & Tokenizer)"]
-            S2["security/validators/ (Verhoeff Checksum)"]
-            S3["security/threat_engine/ (Canaries & Breach Rules)"]
-            S4["security/risk_engine/ (0-100 Exposome Threat Index)"]
-            S5["security/breach_radar/ (HIBP k-Anonymity)"]
-        end
+    TOKEN_MAPPINGS {
+        uuid token_id PK
+        string synthetic_token UK
+        string data_type
+        blob encrypted_real_value
+        blob nonce
+        string owner_device_id
+        timestamp created_at
+        timestamp expires_at
+        string status
+        json rehydration_metadata
+    }
 
-        subgraph M3["MEMBER 3: AI/ML + Detection + Anomaly Analysis"]
-            A1["ai/anomaly/ (Statistical Z-Score Outlier Engine)"]
-            A2["ai/heuristics/ (PII Density & Prompt Filters)"]
-            A3["ai/legal/ (DPDP Act Section 12 Drafter)"]
-            A4["ai/templates/ (Statutory Markdown Templates)"]
-        end
+    PERMISSION_REQUESTS {
+        uuid request_id PK
+        uuid token_id FK
+        string requesting_component
+        string purpose_scope
+        string permission_state
+        timestamp requested_at
+        timestamp resolved_at
+        string owner_decision_notes
+    }
 
-        subgraph M4["MEMBER 4: Frontend + UI/UX + User Workflow"]
-            F1["frontend/src/components/ (ThreatMeter, Sandbox, ApprovalModal)"]
-            F2["frontend/src/pages/ (Dashboard, BreachRadar, AuditLogs)"]
-            F3["frontend/src/services/ (api.js - Consumes /api/v1/)"]
-        end
+    AUDIT_LOGS {
+        uuid audit_id PK
+        timestamp timestamp
+        string request_id
+        string token_id
+        string action
+        string permission_result
+        json metadata_sanitized
+    }
 
-        subgraph Shared["Shared & Auxiliary"]
-            V1["voice/ (Planned Ambient Audio HUD)"]
-            T1["tests/ (Decoupled Pytest Suites)"]
-            D1["docs/architecture/ (ARCHITECTURE.md, REPOSITORY_STRUCTURE.md)"]
-            C1[".env.example, docker-compose.yml, README.md"]
-        end
-    end
+    CANARY_TOKENS {
+        uuid canary_id PK
+        string service_label
+        string canary_email UK
+        string canary_token UK
+        boolean is_tripped
+        timestamp tripped_at
+    }
 
-    M4 -->|REST API Only| M1
-    M1 --> M2
-    M1 --> M3
+    TAKEDOWN_NOTICES {
+        uuid notice_id PK
+        string fiduciary_name
+        string dpo_email
+        string legal_basis
+        text notice_body_markdown
+        string status
+        timestamp created_at
+    }
 ```
 
----
-
-### Diagram 10: Deployment Architecture (Local-First Containerized / Native)
-```mermaid
-flowchart LR
-    subgraph HostSystem["Host System (User Machine)"]
-        UserBrowser["Web Browser (Localhost:3000)"]
-        
-        subgraph LocalDocker["Local Docker Compose / Native Process"]
-            FrontendSvc["Frontend Container<br/>(React 19 / Nginx :3000)"]
-            BackendSvc["Backend Container<br/>(FastAPI / Uvicorn :8000)"]
-            LocalVol[("Host Volume Mount<br/>/app/data/shade_vault.db")]
-        end
-        
-        HostKeystore["Host OS Keystore<br/>(Windows DPAPI / Keychain)"]
-    end
-
-    UserBrowser -->|HTTP| FrontendSvc
-    FrontendSvc -->|Proxy /api/v1| BackendSvc
-    BackendSvc --> LocalVol
-    HostKeystore -.->|Supplies Key| BackendSvc
-    BackendSvc -.->|k-Anonymity Only (5-char hash)| HIBP["External HIBP API"]
-    BackendSvc -.->|Synthetic Prompts Only| Gemini["External Gemini API"]
-```
+### 10.3 PostgreSQL and Redis Decisions
+- **PostgreSQL**: **Removed from the primary data vault.** Serves strictly as optional/future auxiliary telemetry sync infrastructure. Never stores plaintext user secrets.
+- **Redis**: **Optional ephemeral security state.** Used only for rate-limiting counters when available; defaults to an in-memory sliding-window counter for 100% standalone execution.
 
 ---
 
-## 6. Local Encrypted Database Architecture
+## 11. DLP Architecture
 
-### 6.1 Database Engine: Encrypted SQLite (SQLCipher)
-S.H.A.D.E. uses an embedded **encrypted SQLite** database as its primary authoritative data store:
-- **Engine**: SQLite 3 with SQLCipher extension (page-level 256-bit AES encryption with HMAC-SHA512 per page).
-- **Driver**: `aiosqlite` with SQLCipher pragmas (`PRAGMA key`, `PRAGMA cipher_page_size = 4096`, `PRAGMA kdf_iter = 256000`).
-- **Data at Rest**: Entire database file (`shade_vault.db`) is encrypted on disk. If stolen, raw file analysis yields random ciphertext.
-- **Connection Isolation**: Concurrency managed via async connection pooling with `WAL` (Write-Ahead Logging) mode enabled.
-
-### 6.2 Relational Entities in the Local Vault
-1. `token_mappings`: Persistent registry connecting `<SYN_...>` placeholders to encrypted real values.
-2. `permission_requests`: Granular audit of every owner authorization request.
-3. `audit_logs`: Tamper-evident forensic records of system events (strictly redacting real secrets).
-4. `canary_tokens`: Decoy identities and tripwire records.
-5. `takedown_notices`: DPDP Act 2023 Section 12 notice drafts.
+- **Scope**: Outbound prompt inspection, clipboard monitoring, form data.
+- **Deterministic Matchers**:
+  - **Aadhaar**: Regular expression `\b[2-9][0-9]{3}\s?[0-9]{4}\s?[0-9]{4}\b` verified with the **Dihedral D5 Verhoeff algorithm**. False positives are mathematically rejected without network overhead.
+  - **PAN**: Regular expression `\b[A-Z]{5}[0-9]{4}[A-Z]{1}\b` with entity type character verification.
+  - **API Keys**: High-entropy token scanners (AWS, GitHub, Slack tokens).
+- **Synthetic Replacement**: Matched strings are replaced with deterministic placeholders (`<SYN_{TYPE}_{CRC16}>`).
 
 ---
 
-## 7. Cryptographic Key Storage Boundary (`SecureKeyStore`)
+## 12. Threat & Risk Architecture
 
-The encryption key for the local database must **never** be stored inside the database file or committed in source code.
-
-### 7.1 Platform Abstraction Architecture
-```python
-from abc import ABC, abstractmethod
-
-class SecureKeyStore(ABC):
-    @abstractmethod
-    def get_database_key(self) -> bytes:
-        """Retrieve the 32-byte database encryption key from OS secure storage."""
-        pass
-
-    @abstractmethod
-    def store_database_key(self, key: bytes) -> bool:
-        """Persist a newly generated database key in OS secure storage."""
-        pass
-```
-
-### 7.2 Platform Adapters
-- **Windows**: Implemented via `CryptProtectData` / `CryptUnprotectData` (Windows Data Protection API - DPAPI) or Windows Credential Manager.
-- **macOS**: Implemented via Apple Keychain Services (`security` CLI / `SecKeychain` C-APIs).
-- **Linux**: Implemented via the Secret Service API (`org.freedesktop.secrets` / `libsecret`).
-- **Development / Container Fallback**: High-entropy passphrase passed via environment variable `SHADE_MASTER_ENCRYPTION_KEY` with strict permission warnings.
+Owned by **Member 2**:
+- **Canary Honey-Tokens**: Generates trackable synthetic decoy credentials for third-party registrations (`user+canary_1234@shade-vault.io`). If leaked, trips an instant alert for cryptographic leak attribution.
+- **Breach Radar (HIBP k-Anonymity Standard)**:
+  - Computes SHA-1 hash of password locally.
+  - Sends only the first 5 characters to `api.pwnedpasswords.com/range/{prefix}`.
+  - Performs local binary comparison on the remaining 35 characters.
+  - **Prohibition**: Raw passwords, Aadhaar, PAN, or personal identities are **never** transmitted to HIBP.
+- **0–100 Exposome Threat Index**: Deterministic weighted matrix evaluating breach exposures, PII density, anomaly signals, and canary trip indicators.
 
 ---
 
-## 8. Data Classification & Security Boundary Hierarchy
+## 13. AI Architecture
 
-```
-┌────────────────────────────────────────────────────────────────────────┐
-│ LEVEL 1: HIGHEST PROTECTION — KEYS & PASSWORDS                         │
-│ • Database Encryption Key, Master AES-GCM Key, JWT Secret             │
-│ • Stored exclusively in OS Keychain (DPAPI / Keychain / Secret Service)│
-├────────────────────────────────────────────────────────────────────────┤
-│ LEVEL 2: HIGH PROTECTION — ENCRYPTED REAL DATA                         │
-│ • Real Aadhaar, PAN, Passwords, API Keys, Session Secrets              │
-│ • Encrypted at rest in Local SQLite via SQLCipher                      │
-│ • Accessible ONLY via explicit owner permission                        │
-├────────────────────────────────────────────────────────────────────────┤
-│ LEVEL 3: MEDIUM PROTECTION — PERMISSION & AUDIT METADATA               │
-│ • Permission state records, request IDs, component labels             │
-│ • Sanitized audit logs (strictly redacting raw secrets)                │
-├────────────────────────────────────────────────────────────────────────┤
-│ LEVEL 4: CONTROLLED EXPOSURE — SYNTHETIC DATA                          │
-│ • <SYN_AADHAAR_7F29>, <SYN_PAN_44A1>, Synthetic emails                 │
-│ • Safe for transmission to external cloud AI and third-party web forms │
-└────────────────────────────────────────────────────────────────────────┘
-```
+Owned by **Member 3**:
+- **Operating Constraint**: Operates **strictly on pre-masked payloads**. Raw Aadhaar, PAN, and credentials never enter AI prompts.
+- **Anomaly Detection**: Statistical Z-score outlier detection assessing text length, prompt entropy, and PII frequency spikes.
+- **DPDP Act 2023 Section 12 Legal Notice Synthesis**: Generates formal data erasure requisitions citing Section 12(1) and Section 12(2) using Gemini Flash or local Ollama.
+- **Advisory Role**: AI analysis is purely informational and cannot independently authorize or override security actions.
 
 ---
 
-## 9. Status of PostgreSQL and Redis
+## 14. Frontend Architecture
 
-### PostgreSQL Decision
-- **Core Role**: **Removed from the primary data vault architecture.**
-- **Classification**: S.H.A.D.E. does not require PostgreSQL to execute. If a future multi-device telemetry synchronization feature is introduced, PostgreSQL may serve as an optional secondary synchronization target, but it will **never** store plaintext user secrets.
-
-### Redis Decision
-- **Core Role**: **Optional ephemeral security state.**
-- **Classification**: Used only for temporary sliding-window rate limiting and replay prevention. S.H.A.D.E. includes an in-memory sliding-window counter fallback, allowing complete zero-dependency operation on standard laptops without running Redis.
-
----
-
-## 10. Breach Radar (HIBP k-Anonymity Standard)
-
-Password exposure verification strictly protects user privacy via the SHA-1 k-anonymity protocol:
-1. Compute local SHA-1: `h = hashlib.sha1(password.encode()).hexdigest().upper()`
-2. Extract prefix: `prefix = h[:5]` (5 characters)
-3. Extract suffix: `suffix = h[5:]` (35 characters)
-4. Dispatch GET request: `https://api.pwnedpasswords.com/range/{prefix}`
-5. Search response text for matching `suffix:count`.
-6. **Strict Prohibition**: Neither raw passwords nor identity data (Aadhaar, PAN, email) is ever dispatched to HIBP.
+Owned by **Member 4**:
+- **Stack**: React 19, Vite, Vanilla CSS, Lucide React.
+- **Cyber War-Room HUD**: Dark-mode glassmorphic interface displaying real-time security posture.
+- **SVG Exposome Threat Meter**: High-performance SVG gauge reflecting the 0–100 threat index.
+- **Live Sandbox**: Interactive testing console demonstrating real-time DLP prompt interception.
+- **Owner Approval Modal**: Clean dialog prompting the owner to grant or deny rehydration requests.
+- **Constraint**: Communicates strictly via `/api/v1/` and never accesses the local SQLite database directly.
 
 ---
 
-## 11. Structured Logging & Audit Standards
+## 15. Voice Architecture (Planned)
 
-Structured logs are emitted in JSON format to stdout. The custom logging filter automatically sanitizes all log events before output:
-
-```json
-{
-  "timestamp": "2026-10-08T15:55:10.124Z",
-  "level": "INFO",
-  "request_id": "req_01j9x7k5v4e7bm9a8q",
-  "token_id": "SYN_AADHAAR_7F29",
-  "action": "REHYDRATE",
-  "permission_result": "APPROVED",
-  "requesting_component": "kyc_portal_autofill",
-  "details": {
-    "item_type": "AADHAAR_CARD",
-    "token_assigned": "<SYN_AADHAAR_7F29>",
-    "redacted_preview": "********9452"
-  }
-}
-```
-
-**Logging Redaction Rule**: Raw 12-digit Aadhaar numbers, 10-character PANs, raw passwords, and JWT tokens are matched by an output stream filter and transformed into `********[LAST4]` or suppressed entirely. Plaintext secrets are strictly prohibited from audit logs.
+- **Engine**: Offline Picovoice Porcupine ("Hey Shade") + Vosk STT + Pyttsx3 TTS.
+- **Transport**: Issues local REST requests to `127.0.0.1:8000/api/v1/`.
+- **Auditorium Failover**: Includes an on-screen simulation HUD in the frontend for 1-click execution in noisy presentation venues.
 
 ---
 
-## 12. Integration Contracts (Pydantic v2 Schemas)
+## 16. API Boundaries & Contracts
 
-### 12.1 Token Mapping Contract (Member 1)
+All endpoints are versioned under `/api/v1/` and governed by strict Pydantic v2 schemas:
+
 ```python
 from pydantic import BaseModel, Field
-from typing import Optional
+from typing import Optional, List
 from datetime import datetime
 
 class TokenCreateRequest(BaseModel):
@@ -533,7 +387,7 @@ class TokenCreateRequest(BaseModel):
 
 class TokenCreateResponse(BaseModel):
     token_id: str
-    synthetic_token: str = Field(..., description="<SYN_AADHAAR_7F29>")
+    synthetic_token: str
     data_type: str
     created_at: datetime
 
@@ -549,58 +403,80 @@ class RehydrationResponse(BaseModel):
     audit_id: str
 ```
 
-### 12.2 DLP Inspection Contract (Member 2)
-```python
-from typing import List
+---
 
-class DLPInspectionRequest(BaseModel):
-    raw_content: str = Field(..., min_length=1, max_length=50000)
-    source_context: str = Field(default="prompt")
+## 17. Security Boundaries & Zone Classification
 
-class DLPDetectionItem(BaseModel):
-    item_type: str
-    synthetic_token: str
-    redacted_preview: str
-
-class DLPInspectionResponse(BaseModel):
-    is_clean: bool
-    sanitized_content: str
-    detections: List[DLPDetectionItem]
-    scan_duration_ms: float
 ```
-
-### 12.3 Anomaly & Legal Synthesis Contract (Member 3)
-```python
-class AnomalyEvaluationRequest(BaseModel):
-    content_length: int
-    pii_density: float
-    request_frequency: float
-
-class AnomalyEvaluationResponse(BaseModel):
-    anomaly_score: float = Field(..., ge=0.0, le=1.0)
-    is_anomalous: bool
-    heuristic_notes: List[str]
-
-class DPDPNoticeDraftRequest(BaseModel):
-    fiduciary_name: str
-    dpo_email: Optional[str] = None
-    violation_context: str
-    user_pseudonym: str
-
-class DPDPNoticeDraftResponse(BaseModel):
-    fiduciary_name: str
-    legal_basis: str
-    notice_body_markdown: str
-    dispatch_ready: bool
+┌────────────────────────────────────────────────────────────────────────┐
+│ ZONE 1: REAL SENSITIVE DATA (HIGHEST PROTECTION)                        │
+│ • Plaintext Aadhaar, PAN, Passwords, Encryption Keys                   │
+│ • Exists in Host RAM only during active encryption/decryption          │
+├────────────────────────────────────────────────────────────────────────┤
+│ ZONE 2: ENCRYPTED LOCAL STORAGE (SQLCIPHER VAULT)                      │
+│ • Device-local shade_vault.db file protected by AES-256 page cipher    │
+│ • Accessible only via SecureKeyStore-injected master key               │
+├────────────────────────────────────────────────────────────────────────┤
+│ ZONE 3: PERMISSION & AUDIT METADATA                                    │
+│ • Request IDs, component identifiers, consent timestamps               │
+│ • Sanitized audit logs with raw secrets strictly redacted              │
+├────────────────────────────────────────────────────────────────────────┤
+│ ZONE 4: SYNTHETIC DATA (CONTROLLED EXPOSURE)                           │
+│ • <SYN_AADHAAR_7F29>, synthetic email addresses, decoy honeytokens     │
+│ • Safe for transmission to external web services and cloud LLMs        │
+├────────────────────────────────────────────────────────────────────────┤
+│ ZONE 5: EXTERNAL AI / CLOUD SERVICES (UNTRUSTED)                       │
+│ • Google Gemini, third-party APIs, external websites                   │
+│ • Receives ONLY Zone 4 synthetic tokens                                │
+└────────────────────────────────────────────────────────────────────────┘
 ```
 
 ---
 
-## 13. Team Ownership & Branch Mapping
+## 18. Audit Architecture
 
-| Role | Member | Primary Git Branch | Dedicated Ownership Directory |
-| :--- | :--- | :--- | :--- |
-| **Core Architecture & Integration** | **Member 1** | `member-1/backend` | `backend/core/`, `backend/database/`, `backend/keystore/`, `backend/models/`, `backend/schemas/`, `backend/api/routes/`, `docs/` |
-| **Security & Threat Engine** | **Member 2** | `member-2/security` | `security/dlp/`, `security/validators/`, `security/threat_engine/`, `security/risk_engine/`, `security/breach_radar/`, `tests/security/` |
-| **AI/ML & Anomaly Analysis** | **Member 3** | `member-3/ai` | `ai/anomaly/`, `ai/heuristics/`, `ai/legal/`, `ai/templates/`, `tests/ai/` |
-| **Frontend & User Workflow** | **Member 4** | `member-4/frontend` | `frontend/`, `voice/`, `tests/frontend/` |
+Every rehydration request, token generation, and DLP event produces an immutable local audit record:
+- **Logged Attributes**: `timestamp`, `request_id`, `token_id`, `action`, `permission_result`, `requesting_component`.
+- **Prohibited Attributes**: **Never** store plaintext Aadhaar numbers, PAN cards, passwords, or cryptographic keys.
+- **Example**:
+  - `GOOD`: `{"token_id": "SYN_AADHAAR_7F29", "action": "REHYDRATE", "result": "APPROVED", "component": "web_sandbox"}`
+  - `BAD`: `{"aadhaar": "266853339452", "action": "REHYDRATE"}`
+
+---
+
+## 19. Error Handling
+
+- **RFC 7807 Format**: All API errors emit structured JSON error details.
+- **Information Masking**: Stack traces, SQL statements, and internal file paths are stripped before client response emission.
+
+---
+
+## 20. Testing Strategy
+
+Organized into five decoupled test directories under `tests/`:
+- `tests/backend/`: Member 1 tests (FastAPI routes, SQLite vault, `SecureKeyStore` mock, permission state machine).
+- `tests/security/`: Member 2 tests (Dihedral D5 Verhoeff checksum calculation, Indian PAN regex, HIBP k-anonymity queries).
+- `tests/ai/`: Member 3 tests (Statistical anomaly scoring, Z-score thresholds, DPDP notice template formatting).
+- `tests/frontend/`: Member 4 tests (React component rendering, SVG threat meter display).
+- `tests/integration/`: Shared end-to-end tests (DLP $\rightarrow$ Tokenize $\rightarrow$ External Roundtrip $\rightarrow$ Permission $\rightarrow$ Rehydration).
+
+---
+
+## 21. Deployment Strategy
+
+- **Local Execution (Default)**: Standalone Python process running FastAPI on `127.0.0.1:8000` with local encrypted SQLite file on host disk.
+- **Containerized Execution (`docker-compose.yml`)**:
+  - `backend`: FastAPI service mounting local host volume for `shade_vault.db`.
+  - `frontend`: React 19 / Vite build served via Nginx on `127.0.0.1:3000`.
+  - `cache`: Optional Redis service (activated only via `--profile distributed-cache`).
+
+---
+
+## 22. Team Integration Rules
+
+1. **Rule 1 (Inspect Before Edit)**: Always inspect git status and existing implementations before modifying files.
+2. **Rule 2 (No Direct Push to `main`)**: All development occurs on dedicated member branches (`member-1/backend`, `member-2/security`, `member-3/ai`, `member-4/frontend`).
+3. **Rule 3 (Never Force Push)**: `git push --force` is strictly forbidden to preserve shared repository history.
+4. **Rule 4 (No Plaintext Secrets)**: Never commit `.env`, passwords, private keys, or API tokens.
+5. **Rule 5 (Deterministic Authority)**: AI/ML models never independently authorize sensitive actions.
+6. **Rule 6 (Fail-Safe Offline Mode)**: Every cloud API integration must have an instant local mock fallback for hackathon venue resilience.
