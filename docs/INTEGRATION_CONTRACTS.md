@@ -1,6 +1,6 @@
 # S.H.A.D.E. — Inter-Module Integration Contracts & API Specifications
 
-**Document Version**: 1.0.0  
+**Document Version**: 2.0.0  
 **Target Audience**: Member 2 (Security/DLP), Member 3 (AI/ML), Member 4 (Frontend/UX)  
 **Author**: Member 1 (Core Architecture + Backend + Database + Integration)  
 **Status**: APPROVED INTEGRATION SPECIFICATION  
@@ -9,7 +9,7 @@
 
 ## 1. Overview & Architectural Role of Backend
 
-In accordance with [PRODUCT_REQUIREMENTS.md](file:///c:/Users/HP/Desktop/New%20folder%20(2)/KPRIET-HackITon26/docs/PRODUCT_REQUIREMENTS.md) §23, **all major modules communicate through the backend/integration layer**.
+In accordance with [PRODUCT_REQUIREMENTS.md](PRODUCT_REQUIREMENTS.md) §23, **all major modules communicate through the backend/integration layer**.
 
 ```
     Frontend (Member 4)
@@ -21,28 +21,108 @@ In accordance with [PRODUCT_REQUIREMENTS.md](file:///c:/Users/HP/Desktop/New%20f
    Local Encrypted Vault (SQLite + AES-256-GCM / SQLCipher)
 ```
 
-- **Local-First & Device-Authoritative**: Real sensitive data and synthetic token mappings reside exclusively on the owner's device inside the encrypted SQLite vault.
-- **Server-Side Enforcement**: `REQUEST ≠ AUTHORIZATION`. The backend never trusts a frontend-only authorization flag.
-- **Privacy Invariant**: Real sensitive values are never logged or exposed in standard API responses. All responses return synthetic tokens (`SHD_XXXXXXXX`), identifiers, or sanitized metadata.
+### Core Security & Privacy Invariants
+1. **Local-First & Device-Authoritative**: Real sensitive data and synthetic token mappings reside exclusively on the owner's device inside the encrypted SQLite vault.
+2. **Server-Side Enforcement**: `REQUEST ≠ AUTHORIZATION`. The backend never trusts a client-supplied flag such as `"auth_method": "BIOMETRIC"`. All approvals require cryptographically verified assertions.
+3. **Owner & Device Isolation**: Every protected route enforces session and device attestation. No endpoint allows cross-owner access.
+4. **Privacy Invariant**: Real sensitive values are never logged or exposed in standard API responses. All responses return synthetic tokens (`SHD_XXXXXXXX`), identifiers, or sanitized metadata.
 
 ---
 
-## 2. Integration Contract: Member 2 (Security + Threat Engine + DLP)
+## 2. Implementation Status Summary
 
-### Module Ownership Boundaries
-- **Member 2 Owns**: Deterministic regex DLP detection, Verhoeff checksum algorithm, HIBP k-anonymity client, canary token emission logic, threat correlation.
-- **Member 1 (Backend) Owns**: Ingestion endpoint, AES-256-GCM vault persistence, 12-character synthetic token issuance/reuse, exposure record persistence.
+| Contract | Implementation Status | Provider State | Description |
+|:---|:---|:---|:---|
+| **API Session Auth** | `IMPLEMENTED` | `PRODUCTION REQUIRED` | JWT with `jti`, device binding, fail-fast production config |
+| **Device Attestation** | `IMPLEMENTED` | `DEV ONLY` (Dev Provider) / `PRODUCTION REQUIRED` (Platform TPM) | Verifies bound device hardware |
+| **Owner Authorization** | `IMPLEMENTED` | `DEV ONLY` (Dev Mock) / `PRODUCTION REQUIRED` (Platform Hello/WebAuthn) | Challenge-response assertion gate + Argon2id PIN |
+| **Keyed Lookup Hashing** | `IMPLEMENTED` | `PRODUCTION REQUIRED` | Keyed HMAC-SHA256 with separated key |
+| **Full DB Encryption** | `IMPLEMENTED` | `PRODUCTION REQUIRED` | Encrypted at-rest vault file & SQLCipher PRAGMA hooks |
+| **OTP Verification** | `IMPLEMENTED` | `DEV ONLY` (Mock) / `PRODUCTION REQUIRED` (Twilio/SMS) | 300s TTL, 3-attempt limit, brute-force lockout, verified ticket |
+| **Clipboard / DLP** | `IMPLEMENTED` | `PRODUCTION REQUIRED` (M2 Engine) | Sensitive content tokenization & passthrough |
+| **Exposure Search** | `IMPLEMENTED` | `DEV ONLY` (Mock) / `PRODUCTION REQUIRED` (HIBP/OSINT) | Normalized breach result persistence |
+| **Automatic Monitoring** | `IMPLEMENTED` | `STUB` (Scheduler active) / `PRODUCTION REQUIRED` (Breach intelligence) | Background pass with offline resilience |
+| **Destination Trust** | `IMPLEMENTED` | `PRODUCTION REQUIRED` (Configurable Policy) | Evaluates destination URL: `TRUSTED`, `NOT_TRUSTED`, `UNKNOWN` |
+| **Statutory Erasure** | `IMPLEMENTED` | `PRODUCTION REQUIRED` | 7-day statutory deadline, user-review-before-send |
+| **Risk Engine** | `IMPLEMENTED` | `DEV ONLY` (Mock) / `PRODUCTION REQUIRED` (M3 Engine) | Risk score (0-100) and category ingestion |
 
 ---
 
-### Contract 2.1: Clipboard DLP Interception
+## 3. Authentication & Device Identity Contracts
 
-Triggered upon user `CTRL+C`. After Member 2 inspects the clipboard content:
+### Contract 3.1: Session Authentication Contract
+- **Headers Accepted**:
+  - `Authorization: Bearer <jwt_access_token>`
+  - `X-Session-Token: <jwt_access_token>`
+  - `X-Device-Id: <device_id>` *(Optional device verification header)*
+- **Validation**:
+  - Validates JWT signature with `SHADE_JWT_SECRET` (obtained from SecureKeyStore).
+  - Validates session is not revoked in the local vault database.
+  - Validates session expiry (15-minute access token budget).
+  - Validates session device matches the physical device binding.
 
+### Contract 3.2: Device Attestation Contract
+- **Interface**: `DeviceAttestationProvider`
+- **Method**: `verify_device_binding(device, client_device_id, attestation_payload)`
+- **Providers**:
+  - `DevDeviceAttestationProvider`: `[DEVELOPMENT ONLY]` Verifies matching device ID on localhost.
+  - `ProductionDeviceAttestationProvider`: `[PRODUCTION REQUIRED]` Verifies hardware platform assertion (TPM 2.0 / Windows Hello / Apple Secure Enclave).
+
+---
+
+## 4. Owner Authorization & Challenge-Response Contract
+
+### Contract 4.1: Create Authentication Challenge
+- **Endpoint**: `POST /api/v1/authorization/challenge/{authorization_id}`
+- **Authentication**: Bearer Session Token
+- **Response**:
+```json
+{
+  "challenge_id": "3f9821a0-523e-4b2b-9801-abcdef012345",
+  "owner_id": "45851a45-4502-4960-b2f8-1cf2f5223428",
+  "action": "AUTHORIZE_SENSITIVE_VALUE",
+  "resource_id": "a1002003-4455-6677-8899-aabbccddeeff",
+  "nonce": "7d9b23f0a1c2e4b5d6e7f80912345678",
+  "expires_at": "2026-10-08T22:30:00Z"
+}
+```
+
+### Contract 4.2: Owner Approval via Verified Assertion
+- **Endpoint**: `POST /api/v1/authorization/approve/{authorization_id}`
+- **Authentication**: Bearer Session Token
+- **Request (Biometric Assertion)**:
+```json
+{
+  "authorization_id": "a1002003-4455-6677-8899-aabbccddeeff",
+  "auth_method": "BIOMETRIC",
+  "challenge_id": "3f9821a0-523e-4b2b-9801-abcdef012345",
+  "assertion": {
+    "challenge_id": "3f9821a0-523e-4b2b-9801-abcdef012345",
+    "signature": "base64_platform_signature_over_nonce==",
+    "verified": true
+  }
+}
+```
+- **Request (Device PIN Fallback)**:
+```json
+{
+  "authorization_id": "a1002003-4455-6677-8899-aabbccddeeff",
+  "auth_method": "PIN",
+  "assertion": "OwnerPIN1234"
+}
+```
+*Security Invariants*:
+- The backend verifies PINs using Argon2id with an automatic 300-second lockout after 3 failed attempts.
+- Raw biometric data and plaintext PINs are never stored or logged.
+
+---
+
+## 5. Integration Contract: Member 2 (Security + DLP + Threat Engine)
+
+### Contract 5.1: Clipboard DLP Interception
 - **Endpoint**: `POST /api/v1/clipboard/submit`
-- **Authentication**: Local process / Host origin (`127.0.0.1`)
-
-#### Request Schema
+- **Authentication**: Bearer Session Token
+- **Request**:
 ```json
 {
   "content": "sample_api_key_998877665544332211aabbcc",
@@ -54,326 +134,77 @@ Triggered upon user `CTRL+C`. After Member 2 inspects the clipboard content:
   }
 }
 ```
-*Note*: If Member 2 determines the content is clean/non-sensitive, pass `"detected_type": null`.
+- **Backend Behavior**:
+  - If `detected_type` is `null`: Returns `{"action": "PASSTHROUGH", "is_sensitive": false}`.
+  - If sensitive: Computes keyed HMAC-SHA256 lookup hash, encrypts with AES-256-GCM, returns synthetic token `SHD_XXXXXXXX`.
 
-#### Backend Actions
-1. If `detected_type` is `null`: Returns `action: "PASSTHROUGH"`, `is_sensitive: false`. Clipboard remains unchanged.
-2. If `detected_type` is sensitive:
-   - Computes SHA-256 `lookup_hash`.
-   - If already present in vault: Reuses existing 12-char token (`action: "REUSED"`).
-   - If new: Encrypts with AES-256-GCM, stores in vault, generates exactly 12-char token `SHD_XXXXXXXX` (`action: "TOKENIZED"`).
-
-#### Success Response (Sensitive Detected)
-```json
-{
-  "is_sensitive": true,
-  "synthetic_token": "SHD_4A7F9B12",
-  "data_type": "API_KEY",
-  "action": "TOKENIZED"
-}
-```
-
-#### Success Response (Normal Content — Passthrough)
-```json
-{
-  "is_sensitive": false,
-  "synthetic_token": null,
-  "data_type": null,
-  "action": "PASSTHROUGH"
-}
-```
-
----
-
-### Contract 2.2: Exposure & Breach Record Ingestion
-
-When Member 2's threat engine discovers a breach/leak (via HIBP k-anonymity, dark-web monitoring, etc.):
-
-- **Endpoint**: `POST /api/v1/exposure/submit`
-
-#### Request Schema
-```json
-{
-  "sensitive_value_id": null,
-  "data_type": "EMAIL",
-  "organization": "Example Cloud Corp",
-  "source_url": "https://breach-database.example.org",
-  "evidence_summary": "Discovered in credential dump comprising 1.2M records.",
-  "discovery_mode": "AUTOMATIC"
-}
-```
-
-#### Success Response
-```json
-{
-  "exposure_id": "8f3b2a1c-9901-44bb-9a11-ef892304859a",
-  "status": "stored"
-}
-```
-
----
-
-### Contract 2.3: Manual Exposure Search Dispatch
-
-- **Endpoint**: `POST /api/v1/exposure/search`
-
-#### Request Schema
+### Contract 5.2: Exposure Provider Interface (`ExposureProvider`)
+- **Interface**: `ExposureProvider` (`[PRODUCTION REQUIRED]`)
+- **Methods**:
+  - `search(search_type: str, query_hash: str) -> List[NormalizedExposure]`
+  - `is_available() -> bool`
+- **Manual Search Endpoint**: `POST /api/v1/exposure/search`
+- **Request**:
 ```json
 {
   "search_type": "EMAIL",
-  "search_value_hash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  "search_value_hash": "keyed_hmac_hash_of_query_value"
 }
 ```
-*Rule*: Raw search values must never be sent in plaintext; pass only SHA-256 hashes or SHA-1 k-anonymity prefixes.
 
 ---
 
-## 3. Integration Contract: Member 3 (AI/ML + Anomaly + Risk Engine)
+## 6. Integration Contract: Member 3 (AI/ML + Risk Engine)
 
-### Module Ownership Boundaries
-- **Member 3 Owns**: 0–100 Exposome Threat Index calculation, Z-score outlier analysis, PII density heuristics, DPDP Section 12 legal notice markdown generation.
-- **Member 1 (Backend) Owns**: Ingestion and persistent storage of risk scores, case linkage, statutory deadline tracking.
-
----
-
-### Contract 3.1: Submit Risk Analysis Result
-
+### Contract 6.1: Risk Scoring Ingestion & Provider Interface
+- **Interface**: `RiskEngineProvider` (`[PRODUCTION REQUIRED]`)
 - **Endpoint**: `POST /api/v1/risk/submit`
-
-#### Request Schema
+- **Request**:
 ```json
 {
   "exposure_id": "8f3b2a1c-9901-44bb-9a11-ef892304859a",
   "risk_score": 85.5,
   "risk_level": "CRITICAL",
   "analysis_metadata": {
-    "heuristic_weights": {
-      "pii_density": 0.8,
-      "public_entity_multiplier": 1.5
-    },
     "z_score": 2.45,
     "model_version": "v1.2-heuristics"
   }
 }
 ```
-
-#### Risk Level Constraints (PRODUCT_REQUIREMENTS.md §19)
-- `NONE` (`0` score): No exposure detected.
-- `LOW`: Low-risk website exposure.
-- `MEDIUM`: Private organization exposure.
-- `CRITICAL`: Public / government organization exposure.
-
-#### Success Response
-```json
-{
-  "risk_result_id": "c71e8a90-3342-41df-a567-91a0c8b671e2",
-  "status": "stored"
-}
-```
+*Categories*:
+- `0`: No exposure
+- `LOW`: Low-risk website
+- `MEDIUM`: Private organization
+- `CRITICAL`: Public / government organization
 
 ---
 
-### Contract 3.2: Query Latest Risk for Exposure
+## 7. Destination Trust & Rehydration Contract
 
-- **Endpoint**: `GET /api/v1/risk/{exposure_id}`
+### Contract 7.1: Destination Trust Evaluator (`DestinationTrustEvaluator`)
+- **Interface**: `DestinationTrustEvaluator`
+- **Output States**: `TRUSTED`, `NOT_TRUSTED`, `UNKNOWN`
+- **Invariant**: Unknown destinations are never automatically trusted.
 
-#### Response Schema
-```json
-{
-  "id": "c71e8a90-3342-41df-a567-91a0c8b671e2",
-  "exposure_id": "8f3b2a1c-9901-44bb-9a11-ef892304859a",
-  "risk_score": 85.5,
-  "risk_level": "CRITICAL",
-  "scored_at": "2026-10-08T21:30:00Z",
-  "scored_by": "member3-risk-engine"
-}
-```
-
----
-
-## 4. Integration Contract: Member 4 (Frontend + UI/UX + War-Room HUD)
-
-### Module Ownership Boundaries
-- **Member 4 Owns**: Cyber War-Room HUD, Threat Gauge visualizations, Interactive Sandbox, Owner Approval Dialog, Takedown Generator view.
-- **Member 1 (Backend) Owns**: Session authentication, device binding verification, authorization gate processing, rehydration release.
-
----
-
-### Contract 4.1: Owner Registration & Device Binding Flow
-
-1. **Step 1 — Register Mobile**: `POST /api/v1/auth/register`
-   ```json
-   { "mobile_number": "9876543210" }
-   ```
-   *Response*: `{"message": "OTP sent successfully.", "next_step": "POST /auth/verify-otp"}`
-
-2. **Step 2 — Verify OTP**: `POST /api/v1/auth/verify-otp`
-   ```json
-   { "mobile_number": "9876543210", "otp_code": "000000" }
-   ```
-   *Response*: `{"message": "OTP verified successfully.", "mobile_verified": true}`
-
-3. **Step 3 — Bind Device**: `POST /api/v1/auth/bind-device`
-   ```json
-   {
-     "device_fingerprint_hash": "a1b2c3d4e5f60718293a4b5c6d7e8f90...",
-     "platform": "windows",
-     "pin_hash": null
-   }
-   ```
-   *Response*: `{"owner_id": "...", "device_id": "...", "message": "Device bound successfully."}`
-
----
-
-### Contract 4.2: Owner Permission Gate (Authorization)
-
-When an application or rehydration flow requests release of a real sensitive value:
-
-1. **Initiate Authorization**: `POST /api/v1/authorization/request`
-   ```json
-   {
-     "synthetic_token": "SHD_4A7F9B12",
-     "requesting_component": "Frontend HUD Sandbox",
-     "purpose_scope": "Testing Aadhaar paste to official portal"
-   }
-   ```
-   *Response*:
-   ```json
-   {
-     "authorization_id": "a1002003-4455-6677-8899-aabbccddeeff",
-     "state": "PENDING",
-     "requesting_component": "Frontend HUD Sandbox",
-     "purpose_scope": "Testing Aadhaar paste to official portal",
-     "requested_at": "2026-10-08T21:32:00Z"
-   }
-   ```
-
-2. **Owner Approves via Biometric / PIN Modal**: `POST /api/v1/authorization/approve/{authorization_id}`
-   ```json
-   {
-     "authorization_id": "a1002003-4455-6677-8899-aabbccddeeff",
-     "auth_method": "BIOMETRIC"
-   }
-   ```
-   *Response*: `{"authorization_id": "...", "state": "APPROVED", "auth_method": "BIOMETRIC"}`
-
-3. **Owner Denies**: `POST /api/v1/authorization/deny/{authorization_id}`
-   *Response*: `{"authorization_id": "...", "state": "DENIED"}`
-
----
-
-### Contract 4.3: Local Rehydration Flow
-
-- **Detect & Request Rehydration**: `POST /api/v1/rehydration/submit`
+### Contract 7.2: Rehydration Authorization & Release
+- **Scan & Request**: `POST /api/v1/rehydration/submit`
   ```json
   {
-    "content": "Pasting Aadhaar token: SHD_4A7F9B12 into destination form",
-    "requesting_component": "Browser Extension Hook",
-    "purpose_scope": "Form autofill"
+    "content": "Using token: SHD_4A7F9B12",
+    "requesting_component": "External AI / Browser",
+    "destination_url": "https://gov-portal.internal/form",
+    "is_external_ai": false
   }
   ```
-  *Response*:
-  ```json
-  {
-    "tokens_detected": ["SHD_4A7F9B12"],
-    "rehydration_request_ids": ["rehyd-1122-3344"],
-    "all_authorized": false,
-    "message": "1 token(s) detected. Authorization required from owner."
-  }
-  ```
-
-- **Retrieve Result Once Approved**: `POST /api/v1/rehydration/result/{rehydration_request_id}?authorization_id={authorization_id}`
-  *Response (if APPROVED)*:
-  ```json
-  {
-    "rehydration_request_id": "rehyd-1122-3344",
-    "synthetic_token": "SHD_4A7F9B12",
-    "state": "APPROVED",
-    "real_value": "266853339452"
-  }
-  ```
-  *Response (if DENIED or PENDING)*:
-  ```json
-  {
-    "rehydration_request_id": "rehyd-1122-3344",
-    "synthetic_token": "SHD_4A7F9B12",
-    "state": "DENIED",
-    "real_value": null
-  }
-  ```
+- **Result Release**: `POST /api/v1/rehydration/result/{request_id}?authorization_id={auth_id}`
+  - Returns `real_value` strictly when authorization is `APPROVED` and owner matches.
 
 ---
 
-### Contract 4.4: Statutory Erasure & 7-Day Deadline Workflow
+## 8. Statutory Erasure & 7-Day Deadline Workflow
 
-1. **Create Erasure Draft**: `POST /api/v1/erasure/`
-   ```json
-   {
-     "case_id": "case-9988-7766",
-     "dpo_email": "dpo@examplecorp.com",
-     "legal_basis": "DPDP Act 2023, Section 12(1)",
-     "request_body": "Notice is hereby served under Section 12 of the Digital Personal Data Protection Act 2023..."
-   }
-   ```
-   *Response*: `{"id": "...", "status": "DRAFT"}`
-
-2. **Send Erasure Request**: `POST /api/v1/erasure/{id}/send`
-   *Response*:
-   ```json
-   {
-     "id": "erasure-123",
-     "status": "SENT",
-     "request_date": "2026-10-08T21:35:00Z",
-     "deadline_date": "2026-10-15T21:35:00Z",
-     "message": "Erasure request marked as sent. 7-day statutory deadline: 2026-10-15"
-   }
-   ```
-
-3. **Check Deadline**: `GET /api/v1/erasure/{id}/deadline`
-   *Response*:
-   ```json
-   {
-     "id": "erasure-123",
-     "status": "SENT",
-     "deadline_date": "2026-10-15T21:35:00Z",
-     "is_overdue": false,
-     "days_remaining": 7,
-     "message": "Within deadline."
-   }
-   ```
-
-4. **Record Organization Response**: `POST /api/v1/erasure/{id}/response`
-   ```json
-   {
-     "organization_response": "We have deleted the user record from our primary database.",
-     "new_status": "RESOLVED"
-   }
-   ```
-   *Rule*: The backend never marks data deleted without documented evidence in `organization_response`.
-
----
-
-## 5. Standard Error Envelopes (RFC 7807)
-
-All non-2xx responses return consistent, machine-readable JSON:
-
-```json
-{
-  "error": "AUTHORIZATION_REQUIRED",
-  "message": "An APPROVED authorization is required to access this sensitive value.",
-  "detail": null
-}
-```
-
-### Standard Error Codes
-| HTTP Status | Error Code | Description |
-|:---|:---|:---|
-| 400 | `INVALID_REQUEST` | Malformed parameters, duplicate registration, or invalid token structure. |
-| 400 | `INVALID_TOKEN` | Token does not conform to `SHD_[0-9A-F]{8}` specification. |
-| 401 | `UNAUTHORIZED` | Expired or missing session token / incorrect OTP. |
-| 403 | `DEVICE_NOT_BOUND` | Device is not registered or bound to the active vault. |
-| 403 | `AUTHORIZATION_REQUIRED` | Attempted access without an `APPROVED` owner authorization. |
-| 403 | `AUTHORIZATION_EXPIRED` | The 60-second owner authorization prompt has timed out. |
-| 404 | `NOT_FOUND` | Record, case, or token not located. |
-| 404 | `SENSITIVE_DATA_NOT_FOUND`| Value does not exist or has been deleted. |
-| 503 | `EXTERNAL_SERVICE_UNAVAILABLE` | Pluggable external provider (e.g., OTP gateway) is unavailable. |
+1. **Create Draft**: `POST /api/v1/erasure/` (`status="DRAFT"`)
+2. **User Explicitly Sends**: `POST /api/v1/erasure/{id}/send` (Starts 7-day statutory deadline)
+3. **Deadline Status**: `GET /api/v1/erasure/{id}/deadline`
+4. **Follow-Up Dispatch**: `POST /api/v1/erasure/{id}/followup` (Allowed after deadline passes without response)
+5. **Record Evidence Response**: `POST /api/v1/erasure/{id}/response`
