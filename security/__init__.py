@@ -29,6 +29,11 @@ from security.dlp.regex_detector import (
     DLPScanResult,
     RegexDLPDetector,
 )
+from security.breach_radar.client import (
+    BreachRadarCheckResult,
+    EmailBreachCheckResult,
+    XposedOrNotClient,
+)
 from security.hibp.client import (
     HIBPCheckResult,
     HIBPClient,
@@ -87,7 +92,10 @@ __all__ = [
     "CanaryDetector",
     "CanaryToken",
     "CanaryAlert",
-    # HIBP
+    # HIBP & Breach Radar
     "HIBPClient",
     "HIBPCheckResult",
+    "XposedOrNotClient",
+    "BreachRadarCheckResult",
+    "EmailBreachCheckResult",
 ]

@@ -135,3 +135,6 @@ class TrustedDestinationEvaluator:
                 "Public accessibility does not grant trusted status."
             ),
         )
+
+    # Alias for convenience
+    evaluate = is_trusted_destination
