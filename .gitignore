@@ -46,6 +46,10 @@ dist-ssr/
 !.env.example
 *.pem
 *.key
+*.db
+*.sqlite
+*.sqlite3
+data/
 
 # IDE and Editor files
 .vscode/
