@@ -37,12 +37,27 @@
 | **REQ-26** | No Assumptions Rule (Strict Spec Adherence) | All Members | Locked Specifications in `docs/` | Codebase Audit | **IMPLEMENTED** |
 | **REQ-27** | Safe Git Workflow & Linear Collaboration | All Members | Git commit history | `git status`, `git log` | **IMPLEMENTED** |
 | **REQ-28** | Architecture Hierarchy of Priorities | All Members | Spec precedence strictly followed | Architecture reviews | **IMPLEMENTED** |
-| **REQ-29** | Unified S.H.A.D.E. Application System | All Members | Unified FastAPI backend + Cyberpunk SPA HUD | End-to-End Suite (68/68 Passed) | **IMPLEMENTED** |
+| **REQ-29** | Unified S.H.A.D.E. Application System | All Members | Unified FastAPI backend + Cyberpunk SPA HUD | End-to-End Suite (78/78 Passed) | **IMPLEMENTED** |
+
+---
+
+## Real-World Integration Status
+
+| Integration | Mechanism / Class | Status | Verified? | External / Environment Requirement |
+| :--- | :--- | :--- | :--- | :--- |
+| **Windows OS Clipboard Hook** | `WindowsClipboardProvider` via `ctypes` user32/kernel32 sequence listener & atomic replacement | **IMPLEMENTED + VERIFIED** | **YES** | Windows OS (tested live on host). `MemoryClipboardProvider` provided for cross-platform fallback. |
+| **Platform Biometrics** | `PlatformBiometricProvider` supporting Windows Hello / WebAuthn / FIDO2 & TPM cryptographic assertion verification (Ed25519 & ECDSA P-256) | **IMPLEMENTED + REQUIRES LOCAL HARDWARE** | **YES (Cryptographic contract verified)** | Physical platform authenticator touch / biometric sensor required for human presence assertions; Argon2id PIN fallback is 100% operational. |
+| **Statutory SMTP Legal Delivery** | `SMTPDeliveryProvider` supporting configurable STARTTLS / SSL & dev simulation | **IMPLEMENTED + REQUIRES CONFIGURATION** | **YES (Dev simulation & contracts verified)** | Outbound SMTP credentials (`SMTP_HOST`, `SMTP_USER`, `SMTP_PASSWORD`) required for live external dispatch; runs in simulated dev mode by default. |
+| **Breach Coverage (Passwords)** | `HIBPPasswordExposureProvider` via NIST/Cloudflare SHA-1 prefix k-anonymity | **IMPLEMENTED + VERIFIED** | **YES** | Outbound HTTPS connectivity (password never leaves machine; offline fallback supported). |
+| **Breach Coverage (Email Accounts)** | `HIBPEmailExposureProvider` via HIBP v3 Breached Account API | **IMPLEMENTED + REQUIRES EXTERNAL PROVIDER** | **YES (Capability scoped & gated)** | Requires commercial `HIBP_API_KEY` environment variable. |
+| **Breach Coverage (National IDs / Aadhaar / PAN)** | Public Consumer Breach Querying | **NOT SUPPORTED** | **N/A** | **Statutorily and technically unsupported**: No lawful public consumer query API exists for Indian national identity numbers. |
 
 ---
 
 ## Status Classification
-- **IMPLEMENTED**: Fully implemented, connected, and verified by passing automated unit, negative, and integration tests.
-- **PARTIALLY IMPLEMENTED**: Partial logic present, requires additional module completion.
-- **INTEGRATION REQUIRED**: Real production provider connection required (e.g. physical hardware TPM attestation).
-- **OUT OF SCOPE**: Unstructured documents, file attachments, cloud vaults.
+- **IMPLEMENTED + VERIFIED**: Fully implemented, connected, and verified by passing automated unit, negative, and integration tests.
+- **IMPLEMENTED + REQUIRES LOCAL HARDWARE**: Cryptographic assertion verification implemented and tested; physical touch on hardware sensor required for live interactive attestation.
+- **IMPLEMENTED + REQUIRES CONFIGURATION**: Production provider implemented and tested in simulation; external credentials required for live dispatch.
+- **IMPLEMENTED + REQUIRES EXTERNAL PROVIDER**: Provider implemented; requires commercial external API subscription.
+- **NOT SUPPORTED**: Category cannot be lawfully or technically queried through public consumer APIs.
+

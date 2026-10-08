@@ -41,7 +41,39 @@ logger = logging.getLogger(__name__)
 router = APIRouter()
 
 
+@router.get("/capabilities", summary="Truthfully inspect supported breach search provider capabilities")
+async def get_exposure_capabilities(
+    session_ctx: SessionContext = Depends(get_current_session),
+):
+    """
+    Returns truthful capabilities and limitations of configured exposure providers.
+    Clarifies which data types are supported via privacy-preserving mechanisms (e.g. Passwords via k-anonymity)
+    and which types are unsupported externally (e.g. Aadhaar, PAN).
+    """
+    provider = get_exposure_provider()
+    caps = provider.get_capabilities() if provider else []
+    return {
+        "provider_count": len(caps),
+        "capabilities": [
+            {
+                "provider_name": c.provider_name,
+                "supported_data_types": c.supported_data_types,
+                "unsupported_data_types": c.unsupported_data_types,
+                "lookup_mechanism": c.lookup_mechanism,
+                "privacy_model": c.privacy_model,
+                "api_requirements": c.api_requirements,
+                "rate_limits": c.rate_limits,
+                "evidence_provided": c.evidence_provided,
+                "limitations": c.limitations,
+                "supports_monitoring": c.supports_monitoring,
+            }
+            for c in caps
+        ],
+    }
+
+
 @router.post(
+
     "/submit",
     summary="Member 2: Submit a discovered exposure for persistence",
 )

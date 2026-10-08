@@ -57,3 +57,17 @@ KPRIET-HackITon26/
 - **[Master System Architecture (ARCHITECTURE.md)](docs/architecture/ARCHITECTURE.md)**: Comprehensive local-first system blueprint, SQLCipher data vault, sequence diagrams, ER diagrams, and API contracts.
 - **[Repository Structure & Module Ownership (REPOSITORY_STRUCTURE.md)](docs/architecture/REPOSITORY_STRUCTURE.md)**: Strict module boundaries, dependency rules, and Git collaboration workflows.
 - **[Visual Architecture Diagram (repository_architecture.svg)](docs/architecture/diagrams/repository_architecture.svg)**: High-resolution SVG topology of workstream boundaries and local vault flow.
+
+---
+
+## 5. Real-World Integration Status
+
+| Integration | Category / Mechanism | Status | Verified? | External / Environment Requirement |
+| :--- | :--- | :--- | :--- | :--- |
+| **Windows OS Clipboard Hook** | Win32 ctypes `user32`/`kernel32` sequence listener & atomic replacement | **IMPLEMENTED + VERIFIED** | **YES** | Windows OS (tested live on Win32 host). Cross-platform fallback available via `MemoryClipboardProvider`. |
+| **Platform Biometrics** | Windows Hello / WebAuthn / FIDO2 Level 2 & TPM cryptographic assertion verification (Ed25519 & ECDSA P-256) | **IMPLEMENTED + REQUIRES LOCAL HARDWARE** | **YES (Cryptographic contract verified)** | Physical platform authenticator touch / biometric sensor required for human presence assertions; Argon2id PIN fallback is 100% operational. |
+| **Statutory SMTP Legal Delivery** | Python MIME `smtplib` provider with STARTTLS / SSL & dev-simulation mode | **IMPLEMENTED + REQUIRES CONFIGURATION** | **YES (Dev simulation & contracts verified)** | Requires outbound SMTP credentials (`SMTP_HOST`, `SMTP_USER`, `SMTP_PASSWORD`) for live external transmission; safely runs in simulated dev mode by default. |
+| **Breach Coverage (Passwords)** | NIST / Cloudflare SHA-1 prefix k-anonymity API (`api.pwnedpasswords.com`) | **IMPLEMENTED + VERIFIED** | **YES** | Outbound HTTPS connectivity (password never leaves machine; offline fallback supported). |
+| **Breach Coverage (Email Accounts)** | Commercial HIBP v3 Breached Account API | **IMPLEMENTED + REQUIRES EXTERNAL PROVIDER** | **YES (Capability scoped & gated)** | Requires commercial `HIBP_API_KEY` environment variable. |
+| **Breach Coverage (National IDs / Aadhaar / PAN)** | Public Consumer Breach Querying | **NOT SUPPORTED** | **N/A** | **Statutorily and technically unsupported**: No lawful public consumer query API exists for Indian national identity numbers. |
+

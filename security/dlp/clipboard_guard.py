@@ -18,6 +18,7 @@ from dataclasses import dataclass
 from typing import Any, Callable, Dict, Optional
 
 from security.dlp.engine import DLPEngine
+from security.dlp.clipboard_provider import ClipboardProvider, WindowsClipboardProvider, MemoryClipboardProvider
 
 logger = logging.getLogger(__name__)
 
@@ -36,15 +37,18 @@ class ClipboardGuard:
     """
     Local clipboard interception guard.
     Inspects copied text and orchestrates synthetic tokenization through backend services.
+    Supports integration with native OS ClipboardProvider (Windows / In-Memory).
     """
 
     def __init__(
         self,
         dlp_engine: Optional[DLPEngine] = None,
         backend_dispatcher: Optional[Callable[[str, str], Any]] = None,
+        clipboard_provider: Optional[ClipboardProvider] = None,
     ):
         self.dlp_engine = dlp_engine or DLPEngine()
         self.backend_dispatcher = backend_dispatcher
+        self.clipboard_provider = clipboard_provider
 
     def process_copied_text(self, text: str) -> ClipboardProcessingResult:
         """
@@ -100,3 +104,32 @@ class ClipboardGuard:
             detected_type=data_type,
             resulting_clipboard_text=text,
         )
+
+    def start_monitoring(self, provider: Optional[ClipboardProvider] = None) -> None:
+        """
+        Start OS clipboard interception via the configured or provided ClipboardProvider.
+        """
+        active_provider = provider or self.clipboard_provider
+        if active_provider is None:
+            active_provider = WindowsClipboardProvider() if WindowsClipboardProvider().is_available() else MemoryClipboardProvider()
+            self.clipboard_provider = active_provider
+
+        def _on_copied(text: str) -> Optional[str]:
+            result = self.process_copied_text(text)
+            if result.is_sensitive and result.synthetic_token:
+                logger.info(
+                    "[ClipboardGuard] Intercepted sensitive %s, replaced with synthetic token",
+                    result.detected_type,
+                )
+                return result.synthetic_token
+            return None
+
+        active_provider.start_listening(_on_copied)
+        logger.info("[ClipboardGuard] Active clipboard monitoring enabled via %s", type(active_provider).__name__)
+
+    def stop_monitoring(self) -> None:
+        """Stop OS clipboard interception."""
+        if self.clipboard_provider:
+            self.clipboard_provider.stop_listening()
+            logger.info("[ClipboardGuard] Clipboard monitoring stopped.")
+

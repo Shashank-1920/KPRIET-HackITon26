@@ -197,12 +197,58 @@ class DevAuthenticationProvider(BaseAuthProvider):
             return False
 
 
-class ProductionAuthenticationProvider(BaseAuthProvider):
+class PlatformBiometricProvider(BaseAuthProvider):
     """
-    Production authentication provider.
-    Enforces hardware/platform cryptographic assertion verification (Windows Hello / FIDO2 / TPM).
-    Rejects mock flags, strings, or development tokens.
+    Platform biometric provider supporting hardware authenticators (Windows Hello / WebAuthn / TPM).
+    Verifies cryptographic assertions signed by the device's hardware key pair over the challenge nonce.
+    Rejects mock flags, strings, client-forged authentication claims, and replay attempts.
     """
+
+    def __init__(self) -> None:
+        super().__init__()
+        # In-memory registered platform credentials: {owner_id: {credential_id: {"key": pub_key, "type": "ed25519"|"p256"}}}
+        self._registered_credentials: Dict[str, Dict[str, Dict[str, Any]]] = {}
+
+    def register_credential(
+        self,
+        owner_id: str,
+        credential_id: str,
+        public_key_bytes: bytes,
+        key_type: str = "ed25519",
+    ) -> None:
+        """Register a hardware authenticator public key bound to the owner."""
+        if owner_id not in self._registered_credentials:
+            self._registered_credentials[owner_id] = {}
+        self._registered_credentials[owner_id][credential_id] = {
+            "public_key_bytes": public_key_bytes,
+            "key_type": key_type.lower(),
+        }
+        logger.info("[PlatformBiometric] Registered credential %s for owner %s", credential_id, owner_id)
+
+    def check_platform_hardware_status(self) -> Dict[str, Any]:
+        """
+        Truthfully inspects the local host for platform biometric hardware availability.
+        """
+        import platform
+        os_name = platform.system()
+        is_windows = os_name == "Windows"
+        webauthn_dll_available = False
+
+        if is_windows:
+            try:
+                import ctypes
+                ctypes.windll.LoadLibrary("webauthn.dll")
+                webauthn_dll_available = True
+            except Exception:
+                webauthn_dll_available = False
+
+        return {
+            "platform": os_name,
+            "hardware_biometric_supported": is_windows and webauthn_dll_available,
+            "provider_name": "Windows Hello / WebAuthn Native Platform Provider" if is_windows else "FIDO2 Platform Provider",
+            "requires_physical_user_presence": True,
+            "verification_algorithm": "Ed25519 / ECDSA-P256-SHA256",
+        }
 
     def verify_biometric_assertion(
         self,
@@ -210,20 +256,82 @@ class ProductionAuthenticationProvider(BaseAuthProvider):
         assertion: Any,
         owner_id: Optional[str] = None,
     ) -> bool:
+        """
+        Verify a platform cryptographic assertion:
+        - Challenge is validated and consumed (anti-replay).
+        - Must contain signature, challenge nonce, and user_verified flag.
+        - Cryptographic signature verified against registered public key.
+        - Rejects unverified client flags, mock strings, or unauthenticated payloads.
+        """
         challenge = self._validate_and_consume_challenge(challenge_id, owner_id)
+
         if not isinstance(assertion, dict):
+            logger.warning("[PlatformBiometric] Assertion rejected: not a valid dictionary payload.")
             return False
 
-        # In production: verify platform cryptographic signature over challenge.nonce
-        platform_sig = assertion.get("signature")
+        # Reject client-supplied forgery flags like {"verified": true} without signature
+        signature_raw = assertion.get("signature")
         client_nonce = assertion.get("nonce")
-        if not platform_sig or client_nonce != challenge.nonce:
-            logger.error("[AuthProvider] Missing or mismatched challenge nonce in production assertion.")
+        user_verified = assertion.get("user_verified")
+
+        if not signature_raw or not client_nonce:
+            logger.warning("[PlatformBiometric] Missing cryptographic signature or nonce in assertion.")
             return False
 
-        # WebAuthn / Windows Hello credential signature verification hook
-        # Stored public key verification belongs here
-        return True
+        if client_nonce != challenge.nonce:
+            logger.warning("[PlatformBiometric] Nonce mismatch: client %s != challenge %s", client_nonce, challenge.nonce)
+            return False
+
+        if user_verified is not True:
+            logger.warning("[PlatformBiometric] User verification (UV) flag not asserted by platform.")
+            return False
+
+        credential_id = assertion.get("credential_id", "default")
+        owner_creds = self._registered_credentials.get(challenge.owner_id, {})
+        cred_info = owner_creds.get(credential_id)
+
+        if not cred_info:
+            logger.warning("[PlatformBiometric] No registered credential %s for owner %s", credential_id, challenge.owner_id)
+            return False
+
+        # Verify signature
+        try:
+            from cryptography.hazmat.primitives import hashes
+            from cryptography.hazmat.primitives.asymmetric import ec, ed25519
+
+            if isinstance(signature_raw, str):
+                try:
+                    sig_bytes = bytes.fromhex(signature_raw)
+                except ValueError:
+                    import base64
+                    sig_bytes = base64.b64decode(signature_raw)
+            else:
+                sig_bytes = bytes(signature_raw)
+
+            nonce_bytes = challenge.nonce.encode("utf-8")
+            pub_bytes = cred_info["public_key_bytes"]
+            key_type = cred_info["key_type"]
+
+            if key_type == "ed25519":
+                pub_key = ed25519.Ed25519PublicKey.from_public_bytes(pub_bytes)
+                pub_key.verify(sig_bytes, nonce_bytes)
+                logger.info("[PlatformBiometric] Ed25519 signature verified for owner %s", challenge.owner_id)
+                return True
+            elif key_type in ("p256", "ecdsa"):
+                from cryptography.hazmat.primitives.serialization import load_der_public_key, load_pem_public_key
+                try:
+                    pub_key = load_der_public_key(pub_bytes)
+                except Exception:
+                    pub_key = load_pem_public_key(pub_bytes)
+                pub_key.verify(sig_bytes, nonce_bytes, ec.ECDSA(hashes.SHA256()))
+                logger.info("[PlatformBiometric] ECDSA-P256 signature verified for owner %s", challenge.owner_id)
+                return True
+            else:
+                logger.error("[PlatformBiometric] Unsupported key type: %s", key_type)
+                return False
+        except Exception as exc:
+            logger.warning("[PlatformBiometric] Cryptographic verification failed: %s", exc)
+            return False
 
     def verify_pin_assertion(
         self,
@@ -237,6 +345,7 @@ class ProductionAuthenticationProvider(BaseAuthProvider):
         self._check_pin_rate_limit(owner.id)
 
         if not owner.pin_hash:
+            logger.warning("[PlatformBiometric] Owner %s has no configured PIN.", owner.id)
             return False
 
         try:
@@ -250,6 +359,14 @@ class ProductionAuthenticationProvider(BaseAuthProvider):
             return False
 
 
+class ProductionAuthenticationProvider(PlatformBiometricProvider):
+    """
+    Production authentication provider aliases to PlatformBiometricProvider.
+    Enforces hardware/platform cryptographic assertion verification.
+    """
+    pass
+
+
 _auth_provider_instance: Optional[AuthenticationProvider] = None
 
 
@@ -261,3 +378,4 @@ def get_auth_provider() -> AuthenticationProvider:
         else:
             _auth_provider_instance = DevAuthenticationProvider()
     return _auth_provider_instance
+

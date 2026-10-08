@@ -90,6 +90,17 @@ class Settings(BaseSettings):
     otp_provider: str = Field(default="mock", alias="OTP_PROVIDER")
     otp_expiry_seconds: int = Field(default=300, alias="OTP_EXPIRY_SECONDS")
 
+    # ── Legal Request / SMTP Delivery ─────────────────────────────────────────
+    smtp_host: Optional[str] = Field(default=None, alias="SMTP_HOST")
+    smtp_port: int = Field(default=587, alias="SMTP_PORT")
+    smtp_user: Optional[str] = Field(default=None, alias="SMTP_USER")
+    smtp_password: Optional[str] = Field(default=None, alias="SMTP_PASSWORD")
+    smtp_use_tls: bool = Field(default=True, alias="SMTP_USE_TLS")
+    smtp_use_ssl: bool = Field(default=False, alias="SMTP_USE_SSL")
+    smtp_from_email: str = Field(default="privacy@shade.local", alias="SMTP_FROM_EMAIL")
+    smtp_dev_mode: bool = Field(default=True, alias="SMTP_DEV_MODE")
+
+
     def model_post_init(self, __context) -> None:
         if self.shade_env == "production":
             insecure_fallbacks = {

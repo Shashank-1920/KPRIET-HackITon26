@@ -179,7 +179,57 @@ def test_hibp_k_anonymity_privacy_invariant():
     client = HIBPClient()
     # Test checking with offline timeout or mock
     res = client.check_password_pwned("P@ssw0rd123!", timeout=1.0)
-    # The client computed SHA-1 prefix of 5 characters and did not send full password
     assert len(res.hash_prefix) == 5
-    # Whether online or offline, it must return a valid HIBPCheckResult without crashing
     assert isinstance(res.is_compromised, bool)
+
+
+
+def test_memory_clipboard_provider_interception():
+    from security.dlp.clipboard_provider import MemoryClipboardProvider
+    from security.dlp.clipboard_guard import ClipboardGuard
+
+    provider = MemoryClipboardProvider(initial_text="Hello clean world")
+    assert provider.get_text() == "Hello clean world"
+
+    # Set up guard with memory provider and dispatcher
+    tokens = {}
+    def mock_dispatcher(val, data_type):
+        if val not in tokens:
+            tokens[val] = f"SHD_TEST{len(tokens):04d}"
+        return {"synthetic_token": tokens[val], "action": "TOKENIZED"}
+
+    guard = ClipboardGuard(backend_dispatcher=mock_dispatcher, clipboard_provider=provider)
+    guard.start_monitoring(provider)
+
+    # 1. Clean text: unchanged
+    provider.set_text("This is an unclassified message without PII.")
+    assert provider.get_text() == "This is an unclassified message without PII."
+
+    # 2. Sensitive text: auto-tokenized by guard
+    provider.set_text("My secret key is sk-proj-1234567890abcdef1234")
+    assert provider.get_text().startswith("SHD_TEST")
+
+    guard.stop_monitoring()
+
+
+def test_windows_clipboard_provider_bindings_and_roundtrip():
+    import platform
+    from security.dlp.clipboard_provider import WindowsClipboardProvider
+
+    provider = WindowsClipboardProvider()
+    if platform.system() == "Windows" and provider.is_available():
+        # Read current content to restore later
+        original = provider.get_text()
+        test_payload = "S.H.A.D.E. Win32 Native Clipboard Verification"
+
+        try:
+            # Set and read back
+            assert provider.set_text(test_payload) is True
+            assert provider.get_text() == test_payload
+        finally:
+            # Restore original clipboard content
+            if original is not None:
+                provider.set_text(original)
+    else:
+        assert provider.is_available() is False
+
