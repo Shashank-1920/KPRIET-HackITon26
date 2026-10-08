@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>S.H.A.D.E. — Synthetic Host for Automated Data Extractor</title>
+  <link rel="stylesheet" href="/static/css/style.css">
+  <link rel="stylesheet" href="./css/style.css">
+</head>
+<body>
+
+  <!-- Top Navigation Header -->
+  <header class="top-header">
+    <div class="brand-container">
+      <div class="brand-logo">S</div>
+      <div class="brand-text">
+        <h1>S.H.A.D.E. <span>DEFENSE</span></h1>
+        <p>SYNTHETIC HOST FOR AUTOMATED DATA EXTRACTOR // SEC-OPS</p>
+      </div>
+    </div>
+    <div class="header-status-pills">
+      <div class="status-pill" id="device-status-pill">
+        <span class="indicator-dot"></span> DEV-ENCRYPTED-NODE: BOUND
+      </div>
+      <div class="status-pill">
+        🔒 LOCAL VAULT: ENCRYPTED
+      </div>
+    </div>
+  </header>
+
+  <!-- Navigation Bar -->
+  <nav class="nav-tabs">
+    <button class="nav-tab-btn active" data-tab="dashboard" onclick="switchTab('dashboard')">📊 Dashboard & HUD</button>
+    <button class="nav-tab-btn" data-tab="vault" onclick="switchTab('vault')">🔒 Encrypted Vault</button>
+    <button class="nav-tab-btn" data-tab="sandbox" onclick="switchTab('sandbox')">📋 Clipboard Sandbox</button>
+    <button class="nav-tab-btn" data-tab="exposure" onclick="switchTab('exposure')">👁️ Breach Radar</button>
+    <button class="nav-tab-btn" data-tab="cases" onclick="switchTab('cases')">⚖️ Cases & DPDP Erasure</button>
+    <button class="nav-tab-btn" data-tab="voice" onclick="switchTab('voice')">🎙️ Ambient Voice HUD</button>
+  </nav>
+
+  <!-- Main Content View -->
+  <main class="main-container">
+
+    <!-- Quick Demo Action Chips -->
+    <div class="quick-action-bar">
+      <span>🚀 Quick Demo Actions:</span>
+      <button class="action-chip" onclick="document.getElementById('sandbox-input').value='5481 2938 4912'; switchTab('sandbox'); simulateClipboardAction();">Copy Aadhaar</button>
+      <button class="action-chip" onclick="document.getElementById('sandbox-input').value='sk-proj-live-89abf7294ac1092ef'; switchTab('sandbox'); simulateClipboardAction();">Copy OpenAI Key</button>
+      <button class="action-chip" onclick="document.getElementById('sandbox-input').value='Meeting tomorrow at 10 AM at coffee shop.'; switchTab('sandbox'); simulateClipboardAction();">Copy Clean Text</button>
+      <button class="action-chip" onclick="runManualExposureSearch(); switchTab('exposure');">Run Breach Scan</button>
+      <button class="action-chip" onclick="triggerVoiceSimulation('Hey Shade, check threat index'); switchTab('voice');">Voice Threat Briefing</button>
+    </div>
+
+    <!-- TAB 1: DASHBOARD -->
+    <section id="tab-dashboard" class="tab-pane active">
+      <div class="metrics-grid">
+        <div class="metric-card cyan">
+          <h3>Protected Vault Items</h3>
+          <div class="metric-value" id="metric-vault-count">0</div>
+          <div class="metric-subtitle">Device-Local AES-256 Encrypted</div>
+        </div>
+        <div class="metric-card purple">
+          <h3>Active Synthetic Tokens</h3>
+          <div class="metric-value" id="metric-token-count">0</div>
+          <div class="metric-subtitle">12-Character Non-Reversible Placeholders</div>
+        </div>
+        <div class="metric-card amber">
+          <h3>Active Exposure Cases</h3>
+          <div class="metric-value" id="metric-case-count">0</div>
+          <div class="metric-subtitle">DPDP Act 2023 Statutory Cases</div>
+        </div>
+        <div class="metric-card green">
+          <h3>Local Keystore Status</h3>
+          <div class="metric-value" style="font-size:1.6rem; margin-top:0.3rem;">HKDF-SHA256</div>
+          <div class="metric-subtitle">Cryptographic Key Isolation Active</div>
+        </div>
+      </div>
+
+      <!-- Threat Index Gauge Card -->
+      <div class="threat-meter-card">
+        <div class="threat-info">
+          <h3>Centralized Exposome Threat Index</h3>
+          <h2>Threat Level: <span id="threat-gauge-value" style="color:var(--accent-cyan);">0</span> / 100</h2>
+          <span id="threat-gauge-badge" class="badge badge-none">NONE</span>
+          <p style="margin-top:0.75rem; color:var(--text-secondary); font-size:0.85rem;">
+            Powered by Member 3 AI/ML Risk Scoring & Member 2 Threat Telemetry.
+          </p>
+        </div>
+        <div>
+          <svg class="threat-meter-svg" viewBox="0 0 100 100">
+            <circle cx="50" cy="50" r="40" stroke="rgba(255,255,255,0.1)" stroke-width="8" fill="none"/>
+            <circle cx="50" cy="50" r="40" stroke="var(--accent-cyan)" stroke-width="8" fill="none"
+                    stroke-dasharray="251.2" stroke-dashoffset="100" stroke-linecap="round"
+                    style="transform: rotate(-90deg); transform-origin: 50% 50%; transition: all 0.5s ease;"/>
+          </svg>
+        </div>
+      </div>
+    </section>
+
+    <!-- TAB 2: ENCRYPTED VAULT -->
+    <section id="tab-vault" class="tab-pane">
+      <div class="table-container">
+        <div class="table-header">
+          <h2>🔒 Device-Local Encrypted Vault Storage</h2>
+          <button class="btn btn-primary" onclick="loadVault()">Refresh Vault</button>
+        </div>
+        <table>
+          <thead>
+            <tr>
+              <th>Synthetic Token</th>
+              <th>Sensitive Type</th>
+              <th>Safe Metadata</th>
+              <th>Captured Time</th>
+              <th>Owner Actions</th>
+            </tr>
+          </thead>
+          <tbody id="vault-table-body">
+            <tr><td colspan="5" style="text-align:center; color:var(--text-muted);">Loading vault records...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- TAB 3: CLIPBOARD SANDBOX -->
+    <section id="tab-sandbox" class="tab-pane">
+      <div class="sandbox-grid">
+        <div class="sandbox-box">
+          <h3>📋 Ctrl+C Copy Interception Simulator</h3>
+          <p style="font-size:0.8rem; color:var(--text-secondary); margin-bottom:0.8rem;">
+            Test the deterministic DLP engine. If sensitive data is detected, S.H.A.D.E. immediately protects the real value into the encrypted vault and substitutes a 12-char synthetic token. Clean text passes through unchanged.
+          </p>
+          <textarea id="sandbox-input" class="sandbox-textarea" placeholder="Paste or type test data here (e.g., Aadhaar number, API key, password, or regular text)..."></textarea>
+          <div style="display:flex; justify-content:space-between; align-items:center;">
+            <button class="btn btn-primary" onclick="simulateClipboardAction()">Simulate Ctrl+C Copy</button>
+            <span id="sandbox-status-badge" class="badge badge-none">IDLE</span>
+          </div>
+        </div>
+
+        <div class="sandbox-box">
+          <h3>⚡ Clipboard Interception Telemetry</h3>
+          <div id="sandbox-output" class="result-display-box">
+            // Output telemetry will display here after simulated Ctrl+C
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- TAB 4: BREACH RADAR & EXPOSURE -->
+    <section id="tab-exposure" class="tab-pane">
+      <div class="banner-alert">
+        <div>
+          <b>Privacy-Preserving Breach Radar (Member 2)</b>
+          <p style="font-size:0.8rem; color:var(--text-secondary);">Searches utilize cryptographic query hashes. Full sensitive values are never transmitted to external APIs.</p>
+        </div>
+        <div style="display:flex; gap:0.5rem;">
+          <input type="text" id="exposure-query-input" placeholder="Query hash or prefix..." style="background:#080c14; border:1px solid var(--border-color); color:#fff; padding:0.4rem 0.8rem; border-radius:6px; font-size:0.8rem;">
+          <button class="btn btn-primary" onclick="runManualExposureSearch()">Manual Search</button>
+          <button class="btn" onclick="runMonitoringScan()">Run Monitoring Cycle</button>
+        </div>
+      </div>
+
+      <div class="metrics-grid" id="exposures-grid">
+        <!-- Exposure cards will render here -->
+      </div>
+    </section>
+
+    <!-- TAB 5: CASES & DPDP ERASURE -->
+    <section id="tab-cases" class="tab-pane">
+      <div class="banner-alert">
+        <div>
+          <b>Digital Personal Data Protection Act, 2023 (Section 12)</b>
+          <p style="font-size:0.8rem; color:var(--text-secondary);">Statutory 3-Step Lifecycle: Prepare Request ➔ Owner Reviews ➔ Explicit Dispatch (7-Day Statutory Window).</p>
+        </div>
+      </div>
+
+      <div id="cases-list">
+        <!-- Active cases will render here -->
+      </div>
+    </section>
+
+    <!-- TAB 6: VOICE & AMBIENT HUD -->
+    <section id="tab-voice" class="tab-pane">
+      <div class="sandbox-grid">
+        <div class="sandbox-box">
+          <h3>🎙️ Ambient Voice Simulation Controls</h3>
+          <p style="font-size:0.8rem; color:var(--text-secondary); margin-bottom:1rem;">
+            One-click audio triggers for presentation in noisy hackathon auditoriums. Enforces strict boundary: Voice commands can query threat status, but are strictly prohibited from authorizing data rehydration.
+          </p>
+          <div style="display:flex; flex-direction:column; gap:0.75rem;">
+            <button class="btn" style="text-align:left;" onclick="triggerVoiceSimulation('Hey Shade, check threat index')">
+              🗣️ "Hey Shade, check threat index" (Safe Query)
+            </button>
+            <button class="btn" style="text-align:left;" onclick="triggerVoiceSimulation('Hey Shade, scan for active breaches')">
+              🗣️ "Hey Shade, scan for active breaches" (Monitoring Scan)
+            </button>
+            <button class="btn" style="text-align:left;" onclick="triggerVoiceSimulation('Hey Shade, list active erasure cases')">
+              🗣️ "Hey Shade, list active erasure cases" (Legal Status)
+            </button>
+            <button class="btn btn-danger" style="text-align:left;" onclick="triggerVoiceSimulation('Hey Shade, authorize Aadhaar rehydration')">
+              ⚠️ "Hey Shade, authorize Aadhaar rehydration" (Security Policy Block Test)
+            </button>
+          </div>
+        </div>
+
+        <div class="sandbox-box">
+          <h3>🔊 Ambient Audio Event Feed</h3>
+          <div id="voice-hud-log" class="result-display-box" style="height:260px;">
+            // Voice transcription telemetry log ready.
+          </div>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- Interactive Cryptographic Auth Challenge Modal -->
+  <div class="modal-overlay" id="auth-modal">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h2>🔐 Owner Authorization Required</h2>
+        <button class="btn" onclick="closeModal('auth-modal')">✕</button>
+      </div>
+      <div class="modal-body">
+        <p>A request has been initiated to decrypt the synthetic token: <b id="auth-modal-token" style="color:var(--accent-cyan);"></b></p>
+        <p style="font-size:0.78rem; font-family:var(--font-mono); color:var(--text-muted);">
+          Cryptographic Challenge: <span id="auth-modal-challenge"></span>
+        </p>
+        <div class="input-group">
+          <label>Enter Registered Device PIN (Argon2id Verified):</label>
+          <input type="password" id="auth-modal-pin" placeholder="Enter PIN (e.g. 123456)" autocomplete="off">
+        </div>
+      </div>
+      <div class="modal-actions">
+        <button class="btn" onclick="closeModal('auth-modal')">Deny / Cancel</button>
+        <button class="btn btn-primary" onclick="submitAuthAssertion()">Verify & Decrypt</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Auto-Destruct Revealed Secret Modal -->
+  <div class="modal-overlay" id="reveal-secret-modal">
+    <div class="modal-card" style="border-color:var(--accent-green); box-shadow:0 0 30px var(--accent-green-glow);">
+      <div class="modal-header">
+        <h2 style="color:var(--accent-green);">🔓 Decrypted Real Value (Temporary Release)</h2>
+        <span id="reveal-timer" class="badge badge-low" style="font-size:0.9rem;">10s</span>
+      </div>
+      <div class="modal-body">
+        <p>Sensitive value released locally on authorized device. Purges automatically in 10 seconds.</p>
+        <div id="reveal-secret-content" class="result-display-box" style="font-size:1.1rem; color:#fff; font-weight:bold; word-break:break-all;">
+        </div>
+      </div>
+      <div class="modal-actions">
+        <button class="btn btn-primary" onclick="closeModal('reveal-secret-modal')">Close Immediately</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- DPDP Section 12 Statutory Notice Review Modal -->
+  <div class="modal-overlay" id="erasure-review-modal">
+    <div class="modal-card" style="max-width:700px;">
+      <div class="modal-header">
+        <h2>⚖️ Review DPDP Act Section 12 Erasure Notice</h2>
+        <button class="btn" onclick="closeModal('erasure-review-modal')">✕</button>
+      </div>
+      <div class="modal-body">
+        <input type="hidden" id="erasure-modal-id">
+        <p>Organization Target: <b id="erasure-review-org" style="color:var(--accent-cyan);"></b></p>
+        <p style="font-size:0.8rem; color:var(--text-muted); margin-bottom:0.5rem;">Review the formal statutory demand before explicit user dispatch:</p>
+        <pre id="erasure-review-text" class="result-display-box" style="height:220px; white-space:pre-wrap; font-size:0.75rem;"></pre>
+      </div>
+      <div class="modal-actions">
+        <button class="btn" onclick="closeModal('erasure-review-modal')">Cancel</button>
+        <button class="btn btn-primary" onclick="confirmSendErasure()">Explicitly Dispatch Notice (7-Day Clock)</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="/static/js/app.js"></script>
+  <script src="./js/app.js"></script>
+</body>
+</html>
