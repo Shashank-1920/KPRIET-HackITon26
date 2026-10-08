@@ -8,6 +8,7 @@ Sessions are device-bound: a session created on device A cannot be used on devic
 
 import hashlib
 import logging
+import secrets
 from datetime import datetime, timedelta, timezone
 
 from jose import JWTError, jwt
@@ -29,15 +30,23 @@ class SessionService:
     def __init__(self, db: AsyncSession) -> None:
         self._db = db
 
+    def _get_secret(self) -> str:
+        if settings.shade_jwt_secret:
+            return settings.shade_jwt_secret
+        from backend.app.core.keystore import get_key_store
+        return get_key_store().get_jwt_secret()
+
     async def create_session(self, owner_id: str, device_id: str) -> tuple[Session, str]:
         """Create a new session and return (Session record, JWT token string)."""
-        secret = settings.shade_jwt_secret or "dev-insecure-secret-change-in-env"
+        secret = self._get_secret()
         expires_at = datetime.now(timezone.utc) + timedelta(
             minutes=settings.shade_access_token_expire_minutes
         )
         payload = {
             "sub": owner_id,
             "device_id": device_id,
+            "jti": secrets.token_hex(16),
+            "iat": datetime.now(timezone.utc),
             "exp": expires_at,
         }
         token_str = jwt.encode(payload, secret, algorithm=settings.shade_jwt_algorithm)
@@ -55,7 +64,7 @@ class SessionService:
 
     async def validate_session(self, token_str: str) -> Session:
         """Validate JWT and return the Session record."""
-        secret = settings.shade_jwt_secret or "dev-insecure-secret-change-in-env"
+        secret = self._get_secret()
         try:
             payload = jwt.decode(token_str, secret, algorithms=[settings.shade_jwt_algorithm])
         except JWTError:

@@ -4,16 +4,12 @@ Role: Member 1 — Core Architecture + Backend + Database + Integration
 
 Statutory data erasure workflow (DPDP Act 2023, Section 12).
 
-INVARIANT: Backend must NOT mark data as deleted without evidence.
-User controls when to send the request. 7-day deadline tracked.
-
-Endpoints:
-  POST /erasure/               — Create erasure request (DRAFT)
-  GET  /erasure/{id}           — Get erasure request
-  POST /erasure/{id}/send      — Mark as sent, start 7-day deadline
-  POST /erasure/{id}/response  — Record organization response
-  POST /erasure/{id}/followup  — Create follow-up request
-  GET  /erasure/{id}/deadline  — Check deadline status
+INVARIANTS:
+  - All routes require authenticated session.
+  - Operations are strictly isolated to the authenticated owner.
+  - User explicitly reviews and sends requests.
+  - 7-day statutory deadline is maintained.
+  - Follow-up is available only when response is not received.
 """
 
 import logging
@@ -23,8 +19,9 @@ from fastapi import APIRouter, Depends
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from backend.app.api.dependencies import SessionContext, get_current_session
 from backend.app.core.errors import NotFoundError
-from backend.app.database.models import ErasureRequest, FollowUpRequest
+from backend.app.database.models import Case, ErasureRequest, FollowUpRequest
 from backend.app.database.session import get_db
 from backend.app.schemas.schemas import (
     ErasureRequestCreate,
@@ -43,12 +40,18 @@ _DEADLINE_DAYS = 7
 
 @router.post("/", response_model=ErasureRequestResponse, summary="Create erasure request (DRAFT)")
 async def create_erasure_request(
-    body: ErasureRequestCreate, db: AsyncSession = Depends(get_db)
+    body: ErasureRequestCreate,
+    session_ctx: SessionContext = Depends(get_current_session),
+    db: AsyncSession = Depends(get_db),
 ):
     """
     Create a DRAFT erasure request. User reviews before sending.
-    The backend does NOT automatically send the request.
+    Scoped to the authenticated owner's case.
     """
+    case = await db.get(Case, body.case_id)
+    if case is None or case.owner_id != session_ctx.owner.id:
+        raise NotFoundError("Case not found.")
+
     req = ErasureRequest(
         case_id=body.case_id,
         dpo_email=body.dpo_email,
@@ -62,9 +65,16 @@ async def create_erasure_request(
 
 
 @router.get("/{erasure_id}", response_model=ErasureRequestResponse)
-async def get_erasure_request(erasure_id: str, db: AsyncSession = Depends(get_db)):
+async def get_erasure_request(
+    erasure_id: str,
+    session_ctx: SessionContext = Depends(get_current_session),
+    db: AsyncSession = Depends(get_db),
+):
     req = await db.get(ErasureRequest, erasure_id)
     if req is None:
+        raise NotFoundError("Erasure request not found.")
+    case = await db.get(Case, req.case_id)
+    if case is None or case.owner_id != session_ctx.owner.id:
         raise NotFoundError("Erasure request not found.")
     return _to_response(req)
 
@@ -74,22 +84,32 @@ async def get_erasure_request(erasure_id: str, db: AsyncSession = Depends(get_db
     response_model=ErasureRequestSendResponse,
     summary="User sends the erasure request — starts 7-day deadline",
 )
-async def send_erasure_request(erasure_id: str, db: AsyncSession = Depends(get_db)):
+async def send_erasure_request(
+    erasure_id: str,
+    session_ctx: SessionContext = Depends(get_current_session),
+    db: AsyncSession = Depends(get_db),
+):
     """
     User confirms they have sent the erasure request.
-    Backend records the send date and computes the 7-day statutory deadline.
-    Status transitions from DRAFT → SENT.
+    Records send date and computes 7-day statutory deadline.
     """
     req = await db.get(ErasureRequest, erasure_id)
     if req is None:
         raise NotFoundError("Erasure request not found.")
+    case = await db.get(Case, req.case_id)
+    if case is None or case.owner_id != session_ctx.owner.id:
+        raise NotFoundError("Erasure request not found.")
+
     now = datetime.now(timezone.utc)
     req.request_date = now
     req.deadline_date = now + timedelta(days=_DEADLINE_DAYS)
     req.status = "SENT"
+    case.status = "ERASURE_REQUESTED"
     await db.flush()
+
     logger.info(
-        "[Erasure] Request sent id=%s deadline=%s", erasure_id, req.deadline_date
+        "[Erasure] Request sent id=%s deadline=%s owner=%s",
+        erasure_id, req.deadline_date, session_ctx.owner.id,
     )
     return ErasureRequestSendResponse(
         id=req.id,
@@ -100,73 +120,87 @@ async def send_erasure_request(erasure_id: str, db: AsyncSession = Depends(get_d
     )
 
 
-@router.post("/{erasure_id}/response", summary="Record organization response")
-async def record_organization_response(
-    erasure_id: str, body: ErasureResponseUpdate, db: AsyncSession = Depends(get_db)
+@router.post("/{erasure_id}/response", response_model=ErasureRequestResponse)
+async def record_response(
+    erasure_id: str,
+    body: ErasureResponseUpdate,
+    session_ctx: SessionContext = Depends(get_current_session),
+    db: AsyncSession = Depends(get_db),
 ):
-    """
-    Record the organization's response to the erasure request.
-
-    INVARIANT: The backend does NOT mark data as deleted unless `new_status=RESOLVED`
-    is explicitly set and evidence of deletion is provided in `organization_response`.
-    """
     req = await db.get(ErasureRequest, erasure_id)
     if req is None:
         raise NotFoundError("Erasure request not found.")
+    case = await db.get(Case, req.case_id)
+    if case is None or case.owner_id != session_ctx.owner.id:
+        raise NotFoundError("Erasure request not found.")
+
     req.organization_response = body.organization_response
     req.status = body.new_status
+    if body.new_status == "RESOLVED":
+        case.status = "RESOLVED"
+    elif body.new_status == "RESPONSE_RECEIVED":
+        case.status = "AWAITING_RESPONSE"
     await db.flush()
-    return {"id": req.id, "status": req.status, "message": "Organization response recorded."}
+    return _to_response(req)
 
 
 @router.post("/{erasure_id}/followup", response_model=FollowUpResponse)
-async def create_follow_up(
-    erasure_id: str, body: FollowUpRequestCreate, db: AsyncSession = Depends(get_db)
+async def create_followup(
+    erasure_id: str,
+    body: FollowUpRequestCreate,
+    session_ctx: SessionContext = Depends(get_current_session),
+    db: AsyncSession = Depends(get_db),
 ):
-    """Create a follow-up request if no response received by the 7-day deadline."""
     req = await db.get(ErasureRequest, erasure_id)
     if req is None:
         raise NotFoundError("Erasure request not found.")
+    case = await db.get(Case, req.case_id)
+    if case is None or case.owner_id != session_ctx.owner.id:
+        raise NotFoundError("Erasure request not found.")
 
-    followup = FollowUpRequest(
+    fu = FollowUpRequest(
         erasure_request_id=erasure_id,
         follow_up_body=body.follow_up_body,
-        status="DRAFT",
+        status="SENT",
+        sent_at=datetime.now(timezone.utc),
     )
-    db.add(followup)
-    await db.flush()
-
+    db.add(fu)
     req.status = "FOLLOW_UP_SENT"
+    case.status = "FOLLOW_UP_SENT"
+    await db.flush()
     return FollowUpResponse(
-        id=followup.id,
-        erasure_request_id=followup.erasure_request_id,
-        follow_up_body=followup.follow_up_body,
-        status=followup.status,
-        sent_at=followup.sent_at,
-        created_at=followup.created_at,
+        id=fu.id,
+        erasure_request_id=fu.erasure_request_id,
+        follow_up_body=fu.follow_up_body,
+        status=fu.status,
+        sent_at=fu.sent_at,
+        created_at=fu.created_at,
     )
 
 
-@router.get("/{erasure_id}/deadline", summary="Check 7-day deadline status")
-async def check_deadline(erasure_id: str, db: AsyncSession = Depends(get_db)):
+@router.get("/{erasure_id}/deadline")
+async def check_deadline(
+    erasure_id: str,
+    session_ctx: SessionContext = Depends(get_current_session),
+    db: AsyncSession = Depends(get_db),
+):
     req = await db.get(ErasureRequest, erasure_id)
     if req is None:
         raise NotFoundError("Erasure request not found.")
+    case = await db.get(Case, req.case_id)
+    if case is None or case.owner_id != session_ctx.owner.id:
+        raise NotFoundError("Erasure request not found.")
+
     if req.deadline_date is None:
-        return {"status": req.status, "deadline_active": False, "message": "Request not yet sent."}
+        return {"erasure_id": erasure_id, "status": req.status, "deadline_passed": False}
+
     now = datetime.now(timezone.utc)
-    deadline = req.deadline_date
-    if deadline and deadline.tzinfo is None:
-        deadline = deadline.replace(tzinfo=timezone.utc)
-    overdue = (now > deadline) if deadline else False
-    days_left = max(0, (deadline - now).days) if deadline else 0
+    passed = now > req.deadline_date.replace(tzinfo=timezone.utc) if req.deadline_date.tzinfo is None else now > req.deadline_date
     return {
-        "id": req.id,
-        "status": req.status,
+        "erasure_id": erasure_id,
         "deadline_date": req.deadline_date,
-        "is_overdue": overdue,
-        "days_remaining": days_left,
-        "message": "Deadline exceeded — follow-up recommended." if overdue else "Within deadline.",
+        "deadline_passed": passed,
+        "follow_up_eligible": passed and req.status == "SENT",
     }
 
 

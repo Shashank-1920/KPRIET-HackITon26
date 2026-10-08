@@ -251,6 +251,9 @@ class Exposure(Base):
     __tablename__ = "exposures"
 
     id = Column(String(36), primary_key=True, default=_new_uuid)
+    owner_id = Column(
+        String(36), ForeignKey("owners.id", ondelete="CASCADE"), nullable=True
+    )
     sensitive_value_id = Column(
         String(36), ForeignKey("sensitive_values.id", ondelete="SET NULL"), nullable=True
     )
@@ -261,6 +264,8 @@ class Exposure(Base):
     discovered_at = Column(DateTime(timezone=True), default=_utcnow, nullable=False)
     # Monitoring mode: MANUAL | AUTOMATIC
     discovery_mode = Column(String(16), default="MANUAL", nullable=False)
+
+    owner = relationship("Owner", backref="exposures")
 
     risk_results = relationship(
         "RiskResult", back_populates="exposure", cascade="all, delete-orphan"
@@ -316,6 +321,9 @@ class Case(Base):
     __tablename__ = "cases"
 
     id = Column(String(36), primary_key=True, default=_new_uuid)
+    owner_id = Column(
+        String(36), ForeignKey("owners.id", ondelete="CASCADE"), nullable=True
+    )
     exposure_id = Column(
         String(36), ForeignKey("exposures.id", ondelete="CASCADE"), nullable=False
     )

@@ -3,10 +3,15 @@ S.H.A.D.E. — Case Management Router
 Role: Member 1 — Core Architecture + Backend + Database + Integration
 
 Endpoints:
-  POST /cases/              — Create investigation case
-  GET  /cases/              — List all cases
-  GET  /cases/{id}          — Get single case
-  PATCH /cases/{id}         — Update case status/risk
+  POST  /cases/              — Create investigation case
+  GET   /cases/              — List owner cases
+  GET   /cases/{id}          — Get single case
+  PATCH /cases/{id}          — Update case status/risk
+
+INVARIANTS:
+  - All routes require authenticated session.
+  - Cases are strictly isolated to the authenticated owner.
+  - Confirmed evidence is clearly separated from unsupported assumptions.
 """
 
 import logging
@@ -15,6 +20,7 @@ from fastapi import APIRouter, Depends
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from backend.app.api.dependencies import SessionContext, get_current_session
 from backend.app.core.errors import NotFoundError
 from backend.app.database.models import Case, Exposure
 from backend.app.database.session import get_db
@@ -29,17 +35,21 @@ router = APIRouter()
 
 
 @router.post("/", response_model=CaseResponse, summary="Create investigation case")
-async def create_case(body: CaseCreateRequest, db: AsyncSession = Depends(get_db)):
+async def create_case(
+    body: CaseCreateRequest,
+    session_ctx: SessionContext = Depends(get_current_session),
+    db: AsyncSession = Depends(get_db),
+):
     """
     Create a new investigation case for an exposure.
-    evidence and unsupported_notes are clearly separated — the backend
-    will NEVER conflate confirmed evidence with assumptions.
+    Scoped to the authenticated owner.
     """
     exposure = await db.get(Exposure, body.exposure_id)
-    if exposure is None:
+    if exposure is None or exposure.owner_id != session_ctx.owner.id:
         raise NotFoundError("Exposure not found.")
 
     case = Case(
+        owner_id=session_ctx.owner.id,
         exposure_id=body.exposure_id,
         organization=body.organization,
         data_type=body.data_type,
@@ -54,28 +64,39 @@ async def create_case(body: CaseCreateRequest, db: AsyncSession = Depends(get_db
     return _to_response(case)
 
 
-@router.get("/", summary="List all investigation cases")
-async def list_cases(db: AsyncSession = Depends(get_db)):
-    result = await db.execute(select(Case))
+@router.get("/", summary="List all investigation cases for authenticated owner")
+async def list_cases(
+    session_ctx: SessionContext = Depends(get_current_session),
+    db: AsyncSession = Depends(get_db),
+):
+    result = await db.execute(select(Case).where(Case.owner_id == session_ctx.owner.id))
     cases = result.scalars().all()
     return {"count": len(cases), "cases": [_to_response(c) for c in cases]}
 
 
 @router.get("/{case_id}", response_model=CaseResponse)
-async def get_case(case_id: str, db: AsyncSession = Depends(get_db)):
+async def get_case(
+    case_id: str,
+    session_ctx: SessionContext = Depends(get_current_session),
+    db: AsyncSession = Depends(get_db),
+):
     case = await db.get(Case, case_id)
-    if case is None:
+    if case is None or case.owner_id != session_ctx.owner.id:
         raise NotFoundError("Case not found.")
     return _to_response(case)
 
 
 @router.patch("/{case_id}", response_model=CaseResponse, summary="Update case status/risk")
 async def update_case(
-    case_id: str, body: CaseUpdateRequest, db: AsyncSession = Depends(get_db)
+    case_id: str,
+    body: CaseUpdateRequest,
+    session_ctx: SessionContext = Depends(get_current_session),
+    db: AsyncSession = Depends(get_db),
 ):
     case = await db.get(Case, case_id)
-    if case is None:
+    if case is None or case.owner_id != session_ctx.owner.id:
         raise NotFoundError("Case not found.")
+
     if body.status:
         case.status = body.status
     if body.evidence:

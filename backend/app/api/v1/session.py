@@ -24,13 +24,22 @@ logger = logging.getLogger(__name__)
 router = APIRouter()
 
 
+from typing import Optional
+
 @router.post("/create", response_model=SessionCreateResponse)
-async def create_session(db: AsyncSession = Depends(get_db)):
-    """Create a session for the registered owner (MVP: first owner)."""
-    result = await db.execute(select(Owner).where(Owner.is_registered == True).limit(1))
-    owner = result.scalar_one_or_none()
+async def create_session(
+    owner_id: Optional[str] = None,
+    db: AsyncSession = Depends(get_db),
+):
+    """Create a session for the specified owner or registered owner."""
+    if owner_id:
+        owner = await db.get(Owner, owner_id)
+    else:
+        result = await db.execute(select(Owner).where(Owner.is_registered == True).limit(1))
+        owner = result.scalar_one_or_none()
+
     if owner is None:
-        raise NotFoundError("No registered owner. Complete registration first.")
+        raise NotFoundError("No registered owner found.")
     svc = SessionService(db)
     session, token = await svc.create_session(owner.id, owner.device_id)
     return SessionCreateResponse(

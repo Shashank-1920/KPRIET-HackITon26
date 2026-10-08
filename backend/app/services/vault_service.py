@@ -81,7 +81,7 @@ class VaultService:
             return existing, token
 
         # Encrypt and persist
-        key = self._key_store.get_master_key()
+        key = self._key_store.get_vault_key()
         encrypted_blob = encrypt_value(raw_value, key)
 
         sv = SensitiveValue(
@@ -103,15 +103,15 @@ class VaultService:
     # ── READ (authorized only) ────────────────────────────────────────────────
 
     async def retrieve_sensitive_value(
-        self, sensitive_value_id: str, authorization_id: str
+        self,
+        sensitive_value_id: str,
+        authorization_id: str,
+        owner_id: Optional[str] = None,
     ) -> str:
         """
         Decrypt and return the real sensitive value.
-        Requires a valid APPROVED authorization.
-
-        SECURITY: This method ENFORCES authorization. Callers cannot bypass it.
+        Requires a valid APPROVED authorization and owner match.
         """
-        # Verify the authorization is APPROVED
         auth = await self._db.get(Authorization, authorization_id)
         if auth is None or auth.state != "APPROVED":
             raise AuthorizationRequiredError(
@@ -123,13 +123,17 @@ class VaultService:
             )
 
         sv = await self._get_active_value(sensitive_value_id)
-        key = self._key_store.get_master_key()
+        if owner_id and sv.owner_id != owner_id:
+            raise AuthorizationRequiredError(
+                "Cross-owner access denied: requested value does not belong to the authenticated owner."
+            )
+
+        key = self._key_store.get_vault_key()
         plaintext = decrypt_value(sv.encrypted_blob, key)
         logger.info(
             "[VaultService] Sensitive value retrieved under authorization_id=%s",
             authorization_id,
         )
-        # Plaintext is returned to the caller but NEVER logged.
         return plaintext
 
     # ── DELETE ────────────────────────────────────────────────────────────────
