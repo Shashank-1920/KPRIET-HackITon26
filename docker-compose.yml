@@ -1,5 +1,12 @@
 version: '3.8'
 
+# ==============================================================================
+# S.H.A.D.E. — Local-First Reproducible Deployment Configuration
+# S.H.A.D.E. is a device-local security system. The authoritative data vault
+# is a local encrypted SQLite database stored on the owner's host volume.
+# External database servers are NOT required for the core application.
+# ==============================================================================
+
 services:
   backend:
     build:
@@ -11,15 +18,14 @@ services:
       - "127.0.0.1:8000:8000"
     environment:
       - SHADE_ENV=production
-      - DATABASE_URL=postgresql+asyncpg://shade_user:shade_password@db:5432/shade_db
-      - REDIS_URL=redis://cache:6379/0
+      - DATABASE_URL=sqlite+aiosqlite:///app/data/shade_vault.db
+      - DATABASE_ENCRYPTION_PROVIDER=sqlcipher
+      - KEY_STORAGE_BACKEND=dev-passphrase
       - SHADE_MASTER_ENCRYPTION_KEY=${SHADE_MASTER_ENCRYPTION_KEY}
       - SHADE_JWT_SECRET=${SHADE_JWT_SECRET}
-    depends_on:
-      db:
-        condition: service_healthy
-      cache:
-        condition: service_started
+    volumes:
+      # Local encrypted vault storage mounted directly from host
+      - shade_local_vault:/app/data
     networks:
       - shade_network
 
@@ -36,37 +42,20 @@ services:
     networks:
       - shade_network
 
-  db:
-    image: postgres:16-alpine
-    container_name: shade_postgres
-    restart: unless-stopped
-    environment:
-      POSTGRES_USER: shade_user
-      POSTGRES_PASSWORD: shade_password
-      POSTGRES_DB: shade_db
-    volumes:
-      - shade_postgres_data:/var/lib/postgresql/data
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U shade_user -d shade_db"]
-      interval: 5s
-      timeout: 5s
-      retries: 5
-    networks:
-      - shade_network
-
+  # OPTIONAL: Ephemeral Redis cache service (enabled only via --profile distributed-cache)
+  # Not required for local operation; backend automatically uses in-memory sliding-window throttling.
   cache:
     image: redis:7-alpine
-    container_name: shade_redis
+    container_name: shade_redis_optional
     restart: unless-stopped
-    command: ["redis-server", "--maxmemory", "256mb", "--maxmemory-policy", "volatile-lru"]
-    volumes:
-      - shade_redis_data:/data
+    command: ["redis-server", "--maxmemory", "128mb", "--maxmemory-policy", "volatile-lru"]
+    profiles:
+      - distributed-cache
     networks:
       - shade_network
 
 volumes:
-  shade_postgres_data:
-  shade_redis_data:
+  shade_local_vault:
 
 networks:
   shade_network:
