@@ -5,9 +5,19 @@ from ai.legal.dpdp_generator import (
     ErasureNoticeRequest,
     TakedownNoticeRecord,
 )
+from ai.legal.followup_generator import (
+    CaseStatus,
+    ErasureWorkflowEngine,
+    InvestigationCaseRecord,
+    StatutoryFollowUpNotice,
+)
 
 __all__ = [
     "DPDPNoticeGenerator",
     "ErasureNoticeRequest",
     "TakedownNoticeRecord",
+    "ErasureWorkflowEngine",
+    "InvestigationCaseRecord",
+    "StatutoryFollowUpNotice",
+    "CaseStatus",
 ]

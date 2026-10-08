@@ -6,10 +6,20 @@ from ai.analysis.evaluator import (
     ThreatLevel,
     TriageRecommendation,
 )
+from ai.analysis.risk_scoring import (
+    ExposureReport,
+    ExposureRiskEngine,
+    ExposureTargetType,
+    RiskClassification,
+)
 
 __all__ = [
     "AnomalyEvaluationReport",
     "AnomalyEvaluator",
     "ThreatLevel",
     "TriageRecommendation",
+    "ExposureRiskEngine",
+    "ExposureReport",
+    "ExposureTargetType",
+    "RiskClassification",
 ]

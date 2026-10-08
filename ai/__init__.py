@@ -1,8 +1,12 @@
 """S.H.A.D.E. AI & Anomaly Analysis Module (Member 3).
 
-Provides statistical outlier scoring, prompt injection filtering, explainable
-behavioral assessments, statutory DPDP Act 2023 Section 12 notice synthesis,
-and multi-tier model routing (Gemini Flash, Ollama, Offline Fallback).
+Provides:
+- Statistical outlier scoring & Shannon entropy (Section 13)
+- Prompt injection & jailbreak filtering (Section 13)
+- 0-100 Exposure Risk Engine & classifications: 0, LOW, MEDIUM, CRITICAL (Section 18 & 19)
+- DPDP Act 2023 Section 12 notice synthesis (Section 20)
+- 7-Day Deadline Monitor & Case Investigation Records (Section 20 & 21)
+- Multi-tier model routing (Gemini Flash, Ollama, Offline Fallback)
 """
 
 from ai.analysis.evaluator import (
@@ -11,6 +15,12 @@ from ai.analysis.evaluator import (
     ThreatLevel,
     TriageRecommendation,
 )
+from ai.analysis.risk_scoring import (
+    ExposureReport,
+    ExposureRiskEngine,
+    ExposureTargetType,
+    RiskClassification,
+)
 from ai.anomaly.statistical_scorer import StatisticalScore, StatisticalScorer
 from ai.heuristics.pii_density import PIIDensityEvaluator, PIIDensityReport
 from ai.heuristics.prompt_injection import HeuristicFinding, PromptInjectionFilter
@@ -18,6 +28,12 @@ from ai.legal.dpdp_generator import (
     DPDPNoticeGenerator,
     ErasureNoticeRequest,
     TakedownNoticeRecord,
+)
+from ai.legal.followup_generator import (
+    CaseStatus,
+    ErasureWorkflowEngine,
+    InvestigationCaseRecord,
+    StatutoryFollowUpNotice,
 )
 from ai.models.inference_handler import (
     MaskedPromptConstructor,
@@ -37,9 +53,17 @@ __all__ = [
     "AnomalyEvaluationReport",
     "ThreatLevel",
     "TriageRecommendation",
+    "ExposureRiskEngine",
+    "ExposureReport",
+    "ExposureTargetType",
+    "RiskClassification",
     "DPDPNoticeGenerator",
     "ErasureNoticeRequest",
     "TakedownNoticeRecord",
+    "ErasureWorkflowEngine",
+    "InvestigationCaseRecord",
+    "StatutoryFollowUpNotice",
+    "CaseStatus",
     "MaskedPromptConstructor",
     "OfflineModelFallback",
     "RawPIILeakException",

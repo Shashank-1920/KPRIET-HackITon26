@@ -105,8 +105,79 @@ def main():
     print(f"-> Model: {live_res['model']}")
     print(f"-> Response:\n{live_res['text'].strip()}")
 
+    # TEST 7: CheckList Section 18 & 19 Exposure Risk Engine (0-100)
+    banner("TEST 7: CheckList Sec 18 & 19 Exposure Risk Engine (0-100 Score & Classifications)")
+    from ai import ExposureRiskEngine, ExposureTargetType
+    risk_eng = ExposureRiskEngine()
+
+    # Case A: Low-risk forum
+    rep_low = risk_eng.evaluate_exposure(
+        organization="Public Tech Forum",
+        data_type="EMAIL",
+        target_type=ExposureTargetType.LOW_RISK_FORUM,
+        evidence_source="Public pastebin dump",
+        months_ago=24.0,
+    )
+    print(f"Case A (Forum): Score: {rep_low.risk_score}/100 -> Classification: {rep_low.risk_classification.value}")
+
+    # Case B: Private Commercial
+    rep_med = risk_eng.evaluate_exposure(
+        organization="Zomato Limited",
+        data_type="PHONE",
+        target_type=ExposureTargetType.PRIVATE_COMMERCIAL,
+        evidence_source="Aggregator breach record",
+        months_ago=6.0,
+    )
+    print(f"Case B (Private Org): Score: {rep_med.risk_score}/100 -> Classification: {rep_med.risk_classification.value} (Erasure Required: {rep_med.requires_statutory_erasure})")
+
+    # Case C: Public / Critical Telecom & Aadhaar
+    rep_crit = risk_eng.evaluate_exposure(
+        organization="Telecom Provider / Bank",
+        data_type="AADHAAR",
+        target_type=ExposureTargetType.PUBLIC_CRITICAL,
+        evidence_source="Verified regulatory audit log",
+        months_ago=1.0,
+    )
+    print(f"Case C (Critical Org): Score: {rep_crit.risk_score}/100 -> Classification: {rep_crit.risk_classification.value} (Erasure Required: {rep_crit.requires_statutory_erasure})")
+
+    # TEST 8: CheckList Section 20 & 21 (7-Day Deadline & Case Tracking)
+    banner("TEST 8: CheckList Sec 20 & 21 (7-Day Deadline Monitor & Follow-up Notice)")
+    from ai import ErasureWorkflowEngine
+    from datetime import datetime, timedelta, timezone
+    wf = ErasureWorkflowEngine()
+
+    start_date = datetime.now(timezone.utc) - timedelta(days=8) # Simulating request sent 8 days ago
+    case = wf.initialize_case(
+        organization="PhonePe Private Limited",
+        data_type="UPI_TRANSACTION_RECORDS",
+        evidence_source="Certified HIBP radar scan",
+        risk_score=rep_crit.risk_score,
+        risk_level=rep_crit.risk_classification.value,
+        initial_notice_body=notice.notice_body_markdown,
+        request_date=start_date,
+    )
+    print(f"-> Case ID: {case.case_id}")
+    print(f"-> Initial Request Date: {case.initial_request_date}")
+    print(f"-> 7-Day Statutory Deadline: {case.statutory_deadline_7d}")
+
+    # Check deadline lapse
+    is_lapsed = wf.check_deadline_status(case)
+    print(f"-> 7-Day Deadline Status: {'EXPIRED / ACTIONABLE DEFAULT' if is_lapsed else 'ACTIVE'}")
+    print(f"-> Case Status: {case.status.value}")
+
+    # Generate statutory follow-up escalation
+    followup = wf.generate_statutory_followup(
+        case=case,
+        dpo_email="grievance@phonepe.com",
+        applicant_name="Shashank",
+        identifier="+91 98765 43210",
+    )
+    print(f"-> Follow-up Reference: {followup.followup_reference}")
+    print(f"-> Escalation Subject: {followup.subject}")
+    print(f"-> Mailto 1-Click Link: {followup.mailto_uri[:60]}...[TRUNCATED]")
+
     print("\n" + "=" * 70)
-    print("  ALL TESTS COMPLETED SUCCESSFULLY!")
+    print("  ALL 8 END-TO-END SCENARIOS COMPLETED SUCCESSFULLY!")
     print("=" * 70)
 
 if __name__ == "__main__":
