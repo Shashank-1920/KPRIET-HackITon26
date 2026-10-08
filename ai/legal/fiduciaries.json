@@ -1,0 +1,94 @@
+{
+  "fiduciaries": [
+    {
+      "id": "paytm",
+      "name": "One97 Communications Limited (Paytm)",
+      "category": "FINTECH_PAYMENTS",
+      "grievance_officer": "Nodal Grievance Officer",
+      "dpo_email": "nodal@paytm.com",
+      "address": "One97 Communications Ltd, Skymark One, Sector 98, Noida, UP - 201301",
+      "typical_identifiers": ["Registered Mobile Number", "PAN Number", "UPI Virtual Payment Address"]
+    },
+    {
+      "id": "phonepe",
+      "name": "PhonePe Private Limited",
+      "category": "FINTECH_PAYMENTS",
+      "grievance_officer": "Data Grievance Officer",
+      "dpo_email": "grievance@phonepe.com",
+      "address": "Office-2, Floor 4,5,6,7, Wing A, Block A, Salarpuria Softzone, Bellandur, Bengaluru - 560103",
+      "typical_identifiers": ["Phone Number", "Bank Account Number", "Device ID"]
+    },
+    {
+      "id": "cred",
+      "name": "Dreamplug Technologies Pvt Ltd (CRED)",
+      "category": "FINTECH_PAYMENTS",
+      "grievance_officer": "Grievance Officer",
+      "dpo_email": "grievanceofficer@cred.club",
+      "address": "No. 769, 80 Feet Road, 4th Block, Koramangala, Bengaluru - 560034",
+      "typical_identifiers": ["Mobile Number", "Credit Card Token Records", "PAN Number"]
+    },
+    {
+      "id": "razorpay",
+      "name": "Razorpay Software Private Limited",
+      "category": "FINTECH_PAYMENTS",
+      "grievance_officer": "Privacy & Grievance Officer",
+      "dpo_email": "grievances@razorpay.com",
+      "address": "1st Floor, SJR Cyber, Hosur Road, Adugodi, Bengaluru - 560030",
+      "typical_identifiers": ["Merchant ID", "Customer Email", "Transaction Reference Number"]
+    },
+    {
+      "id": "jio",
+      "name": "Reliance Jio Infocomm Limited",
+      "category": "TELECOM",
+      "grievance_officer": "Appellate / Grievance Authority",
+      "dpo_email": "grievance.officer@jio.com",
+      "address": "Maker Chambers IV, 222, Nariman Point, Mumbai - 400021",
+      "typical_identifiers": ["Jio Mobile Number", "Customer CAF ID", "Aadhaar e-KYC Record"]
+    },
+    {
+      "id": "airtel",
+      "name": "Bharti Airtel Limited",
+      "category": "TELECOM",
+      "grievance_officer": "Nodal Grievance Authority",
+      "dpo_email": "nodalofficer@airtel.com",
+      "address": "Bharti Crescent, 1 Nelson Mandela Road, Vasant Kunj, Phase II, New Delhi - 110070",
+      "typical_identifiers": ["Airtel Subscriber MSISDN", "Account Number", "SIM IMSI"]
+    },
+    {
+      "id": "zomato",
+      "name": "Zomato Limited",
+      "category": "FOOD_DELIVERY",
+      "grievance_officer": "Grievance Officer",
+      "dpo_email": "privacy@zomato.com",
+      "address": "Ground Floor, 12A, 94, Meghdoot, Nehru Place, New Delhi - 110019",
+      "typical_identifiers": ["Registered Mobile", "Delivery GPS Coordinates", "Saved Addresses"]
+    },
+    {
+      "id": "swiggy",
+      "name": "Bundl Technologies Pvt Ltd (Swiggy)",
+      "category": "FOOD_DELIVERY",
+      "grievance_officer": "Grievance Officer",
+      "dpo_email": "grievances@swiggy.in",
+      "address": "Devarabisanahalli, Outer Ring Road, Bellandur, Bengaluru - 560103",
+      "typical_identifiers": ["Primary Phone Number", "Order History", "Saved Card Tokens"]
+    },
+    {
+      "id": "flipkart",
+      "name": "Flipkart Internet Private Limited",
+      "category": "ECOMMERCE",
+      "grievance_officer": "Grievance Officer",
+      "dpo_email": "grievance.officer@flipkart.com",
+      "address": "Buildings Alyssa, Begonia & Clover, Embassy Tech Village, Outer Ring Road, Bengaluru - 560103",
+      "typical_identifiers": ["Customer Email", "Shipping Address Book", "Phone Number"]
+    },
+    {
+      "id": "ola",
+      "name": "ANI Technologies Private Limited (Ola Cabs)",
+      "category": "TRANSPORTATION",
+      "grievance_officer": "Grievance Redressal Officer",
+      "dpo_email": "grievanceofficer@olacabs.com",
+      "address": "Regent Insignia, 4th Block, Koramangala, Bengaluru - 560034",
+      "typical_identifiers": ["Rider Mobile Number", "Trip Telemetry", "UPI Handle"]
+    }
+  ]
+}
