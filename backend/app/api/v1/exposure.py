@@ -4,15 +4,17 @@ Role: Member 1 — Core Architecture + Backend + Database + Integration
 
 Integration Contract for Member 2 (Security + Threat Engine).
 
-Member 2 calls these endpoints to:
-  - Submit a discovered exposure for persistence.
-  - Trigger a manual exposure search.
-
 Endpoints:
   POST /exposure/submit        — Member 2 submits a discovered exposure
-  POST /exposure/search        — Initiate a manual exposure search
-  GET  /exposure/              — List all exposures
+  POST /exposure/search        — Initiate exposure search via ExposureProvider
+  POST /exposure/monitor/run   — Trigger exposure monitoring cycle
+  GET  /exposure/              — List owner-scoped exposures
   GET  /exposure/{id}          — Get single exposure
+
+INVARIANTS:
+  - All routes require authenticated session.
+  - All exposures are strictly isolated to the authenticated owner.
+  - Results are never fabricated. If provider is unavailable, clear status is returned.
 """
 
 import logging
@@ -22,6 +24,7 @@ from fastapi import APIRouter, Depends
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from backend.app.api.dependencies import SessionContext, get_current_session
 from backend.app.core.errors import NotFoundError
 from backend.app.database.models import Exposure, RiskResult
 from backend.app.database.session import get_db
@@ -30,6 +33,9 @@ from backend.app.schemas.schemas import (
     ExposureSearchRequest,
     ExposureSubmitRequest,
 )
+from backend.app.services.exposure_provider import get_exposure_provider
+from backend.app.services.monitoring_service import MonitoringService
+from backend.app.services.risk_engine_provider import get_risk_engine_provider
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
@@ -41,23 +47,14 @@ router = APIRouter()
 )
 async def submit_exposure(
     body: ExposureSubmitRequest,
+    session_ctx: SessionContext = Depends(get_current_session),
     db: AsyncSession = Depends(get_db),
 ):
     """
-    **Integration Contract for Member 2 (Security Engine)**
-
-    Member 2 calls this endpoint to persist a discovered exposure/breach record.
-    Backend stores it; Member 2 owns the discovery and detection logic.
-
-    Fields:
-    - sensitive_value_id : (optional) vault record associated with the exposure.
-    - data_type          : Type of data exposed (EMAIL, PASSWORD, etc.).
-    - organization       : Organization/platform where the breach occurred.
-    - source_url         : Source of discovery (URL, database name).
-    - evidence_summary   : Safe, sanitized description of evidence (no raw PII).
-    - discovery_mode     : MANUAL (user-initiated) | AUTOMATIC (background monitor).
+    Persist a discovered exposure scoped to the authenticated owner.
     """
     exposure = Exposure(
+        owner_id=session_ctx.owner.id,
         sensitive_value_id=body.sensitive_value_id,
         data_type=body.data_type,
         organization=body.organization,
@@ -68,41 +65,92 @@ async def submit_exposure(
     db.add(exposure)
     await db.flush()
     logger.info(
-        "[Exposure] New exposure id=%s type=%s org=%s mode=%s",
-        exposure.id, body.data_type, body.organization, body.discovery_mode,
+        "[Exposure] New exposure id=%s type=%s org=%s owner=%s",
+        exposure.id, body.data_type, body.organization, session_ctx.owner.id,
     )
     return {"exposure_id": exposure.id, "status": "stored"}
 
 
-@router.post("/search", summary="Initiate manual exposure search")
-async def search_exposure(body: ExposureSearchRequest):
+@router.post("/search", summary="Initiate exposure search via configured provider")
+async def search_exposure(
+    body: ExposureSearchRequest,
+    session_ctx: SessionContext = Depends(get_current_session),
+    db: AsyncSession = Depends(get_db),
+):
     """
-    **Integration Contract for Member 2**
-
-    Initiates a manual exposure search. The search_value_hash (SHA-256) is passed
-    to Member 2's security engine. Member 2 performs the actual breach lookup
-    (HIBP k-anonymity, OSINT, etc.) and calls POST /exposure/submit with results.
-
-    Raw sensitive values must NOT be sent here — only SHA-256 hashes.
+    Initiate an exposure search using the configured ExposureProvider.
+    Normalizes findings and persists exposure records scoped to the owner.
     """
-    # Backend orchestration point: in full integration, this would:
-    # 1. Dispatch search request to Member 2's security engine via internal queue.
-    # 2. Member 2 performs HIBP/OSINT lookup.
-    # 3. Member 2 calls /exposure/submit with findings.
-    # For MVP: return a contract acknowledgment.
+    provider = get_exposure_provider()
+    if provider is None or not provider.is_available():
+        return {
+            "search_type": body.search_type,
+            "status": "PROVIDER_UNAVAILABLE",
+            "message": "Exposure search provider is currently unavailable or unconfigured.",
+            "results": [],
+        }
+
+    findings = await provider.search(body.search_type, body.search_value_hash)
+    stored_exposures = []
+    risk_engine = get_risk_engine_provider()
+
+    for item in findings:
+        exp = Exposure(
+            owner_id=session_ctx.owner.id,
+            sensitive_value_id=body.sensitive_value_id,
+            data_type=item.data_type,
+            organization=item.organization,
+            source_url=item.source,
+            evidence_summary=item.evidence_summary,
+            discovery_mode="MANUAL",
+            discovered_at=item.discovered_at,
+        )
+        db.add(exp)
+        await db.flush()
+        stored_exposures.append(exp.id)
+
+        if risk_engine and risk_engine.is_available():
+            risk_res = await risk_engine.evaluate_risk(
+                exposure_id=exp.id,
+                data_type=item.data_type,
+                organization=item.organization,
+            )
+            if risk_res:
+                rr = RiskResult(
+                    exposure_id=exp.id,
+                    risk_score=risk_res.risk_score,
+                    risk_level=risk_res.risk_level,
+                    scored_by="member3-risk-engine",
+                )
+                db.add(rr)
+
     return {
         "search_type": body.search_type,
-        "status": "SEARCH_DISPATCHED",
-        "message": (
-            "Search dispatched to security engine. "
-            "Member 2 will call POST /exposure/submit with results."
-        ),
+        "status": "COMPLETED",
+        "count": len(stored_exposures),
+        "exposure_ids": stored_exposures,
     }
 
 
-@router.get("/", summary="List all stored exposures")
-async def list_exposures(db: AsyncSession = Depends(get_db)):
-    result = await db.execute(select(Exposure))
+@router.post("/monitor/run", summary="Trigger exposure monitoring cycle")
+async def run_monitoring_cycle(
+    session_ctx: SessionContext = Depends(get_current_session),
+    db: AsyncSession = Depends(get_db),
+):
+    """Trigger background monitoring cycle for the authenticated owner."""
+    svc = MonitoringService(db)
+    result = await svc.run_monitoring_cycle(session_ctx.owner.id)
+    return result
+
+
+@router.get("/", summary="List all stored exposures for authenticated owner")
+async def list_exposures(
+    session_ctx: SessionContext = Depends(get_current_session),
+    db: AsyncSession = Depends(get_db),
+):
+    result = await db.execute(
+        select(Exposure).where(Exposure.owner_id == session_ctx.owner.id)
+    )
     exposures = result.scalars().all()
     items = []
     for e in exposures:
@@ -121,16 +169,20 @@ async def list_exposures(db: AsyncSession = Depends(get_db)):
 
 
 @router.get("/{exposure_id}", response_model=ExposureResponse)
-async def get_exposure(exposure_id: str, db: AsyncSession = Depends(get_db)):
-    exposure = await db.get(Exposure, exposure_id)
-    if exposure is None:
+async def get_exposure(
+    exposure_id: str,
+    session_ctx: SessionContext = Depends(get_current_session),
+    db: AsyncSession = Depends(get_db),
+):
+    exp = await db.get(Exposure, exposure_id)
+    if exp is None or exp.owner_id != session_ctx.owner.id:
         raise NotFoundError("Exposure not found.")
     return ExposureResponse(
-        id=exposure.id,
-        data_type=exposure.data_type,
-        organization=exposure.organization,
-        source_url=exposure.source_url,
-        evidence_summary=exposure.evidence_summary,
-        discovered_at=exposure.discovered_at,
-        discovery_mode=exposure.discovery_mode,
+        id=exp.id,
+        data_type=exp.data_type,
+        organization=exp.organization,
+        source_url=exp.source_url,
+        evidence_summary=exp.evidence_summary,
+        discovered_at=exp.discovered_at,
+        discovery_mode=exp.discovery_mode,
     )
