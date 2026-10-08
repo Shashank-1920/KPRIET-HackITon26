@@ -99,11 +99,21 @@ class HIBPExposureProviderStub(ExposureProvider):
 _exposure_provider_instance: Optional[ExposureProvider] = None
 
 
+def set_exposure_provider(provider: ExposureProvider) -> None:
+    """Set or override the active exposure intelligence provider."""
+    global _exposure_provider_instance
+    _exposure_provider_instance = provider
+
+
 def get_exposure_provider() -> Optional[ExposureProvider]:
     global _exposure_provider_instance
     if _exposure_provider_instance is None:
-        if settings.shade_env == "production":
-            _exposure_provider_instance = HIBPExposureProviderStub()
-        else:
-            _exposure_provider_instance = MockExposureProvider()
+        try:
+            from security.threat_engine.exposure_intelligence import ThreatIntelligenceExposureProvider
+            _exposure_provider_instance = ThreatIntelligenceExposureProvider()
+        except ImportError:
+            if settings.shade_env == "production":
+                _exposure_provider_instance = HIBPExposureProviderStub()
+            else:
+                _exposure_provider_instance = MockExposureProvider()
     return _exposure_provider_instance

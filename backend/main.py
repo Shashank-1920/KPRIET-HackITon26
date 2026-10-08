@@ -74,6 +74,23 @@ def create_app() -> FastAPI:
     async def health() -> dict:
         return {"status": "ok", "service": "shade-backend", "local_only": True}
 
+    # ── Frontend HUD & Static files ───────────────────────────────────────────
+    import os
+    from fastapi.staticfiles import StaticFiles
+    from fastapi.responses import FileResponse
+
+    frontend_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "frontend"))
+    if os.path.exists(frontend_dir):
+        app.mount("/static", StaticFiles(directory=frontend_dir), name="static")
+
+        @app.get("/", include_in_schema=False)
+        @app.get("/app", include_in_schema=False)
+        async def serve_frontend():
+            index_path = os.path.join(frontend_dir, "index.html")
+            if os.path.exists(index_path):
+                return FileResponse(index_path)
+            return {"service": "S.H.A.D.E. Backend", "status": "active"}
+
     return app
 
 

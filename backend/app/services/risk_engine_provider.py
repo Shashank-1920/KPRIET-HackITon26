@@ -103,8 +103,18 @@ class Member3RiskEngineStub(RiskEngineProvider):
 _risk_engine_instance: Optional[RiskEngineProvider] = None
 
 
+def set_risk_engine_provider(provider: RiskEngineProvider) -> None:
+    """Set or override the active risk engine provider."""
+    global _risk_engine_instance
+    _risk_engine_instance = provider
+
+
 def get_risk_engine_provider() -> RiskEngineProvider:
     global _risk_engine_instance
     if _risk_engine_instance is None:
-        _risk_engine_instance = DevRiskEngineProvider()
+        try:
+            from ai.risk_engine.engine import AIRiskEngine
+            _risk_engine_instance = AIRiskEngine()
+        except ImportError:
+            _risk_engine_instance = DevRiskEngineProvider()
     return _risk_engine_instance
