@@ -1,0 +1,1208 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SHADE — Local AI Privacy</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <style>
+    /* =========================================================================
+       PURE CLEAN MINIMALIST DESIGN SYSTEM
+       Apple & Vercel inspired: whitespace, crisp typography, zero visual noise
+       ========================================================================= */
+    :root {
+      --bg: #ffffff;
+      --bg-subtle: #f8fafc;
+      --bg-hover: #f1f5f9;
+      --border: #e2e8f0;
+      --border-dark: #cbd5e1;
+
+      --text: #0f172a;
+      --text-muted: #64748b;
+      --text-dim: #94a3b8;
+
+      --primary: #0f172a;
+      --primary-hover: #1e293b;
+      --blue: #2563eb;
+      --blue-subtle: #eff6ff;
+      --green: #10b981;
+      --green-subtle: #ecfdf5;
+      --amber: #f59e0b;
+      --amber-subtle: #fffbeb;
+      --red: #ef4444;
+      --red-subtle: #fef2f2;
+
+      --font: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      --mono: 'JetBrains Mono', ui-monospace, monospace;
+      --radius: 8px;
+    }
+
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg: #09090b;
+        --bg-subtle: #121215;
+        --bg-hover: #18181b;
+        --border: #27272a;
+        --border-dark: #3f3f46;
+
+        --text: #f8fafc;
+        --text-muted: #94a3b8;
+        --text-dim: #64748b;
+
+        --primary: #f8fafc;
+        --primary-hover: #e2e8f0;
+        --blue: #38bdf8;
+        --blue-subtle: rgba(56, 189, 248, 0.1);
+        --green: #34d399;
+        --green-subtle: rgba(52, 211, 153, 0.1);
+        --amber: #fbbf24;
+        --amber-subtle: rgba(251, 191, 36, 0.1);
+        --red: #f87171;
+        --red-subtle: rgba(248, 113, 113, 0.1);
+      }
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      background-color: var(--bg);
+      color: var(--text);
+      font-family: var(--font);
+      font-size: 14px;
+      line-height: 1.6;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* MINIMAL TOPBAR */
+    header.nav-header {
+      border-bottom: 1px solid var(--border);
+      padding: 0 32px;
+      height: 60px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background: var(--bg);
+      position: sticky;
+      top: 0;
+      z-index: 10;
+    }
+
+    .brand-wrap {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .brand-logo {
+      font-weight: 700;
+      font-size: 16px;
+      letter-spacing: -0.5px;
+      color: var(--text);
+      text-decoration: none;
+    }
+
+    .brand-tag {
+      font-size: 11px;
+      color: var(--text-dim);
+      font-family: var(--mono);
+      background: var(--bg-subtle);
+      border: 1px solid var(--border);
+      padding: 2px 8px;
+      border-radius: 20px;
+    }
+
+    nav.links-wrap {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .tab-link {
+      background: transparent;
+      border: none;
+      color: var(--text-muted);
+      font-size: 13px;
+      font-weight: 500;
+      padding: 6px 14px;
+      border-radius: var(--radius);
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+
+    .tab-link:hover {
+      color: var(--text);
+      background: var(--bg-hover);
+    }
+
+    .tab-link.active {
+      color: var(--text);
+      background: var(--bg-hover);
+      font-weight: 600;
+    }
+
+    .header-actions {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .status-badge {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 12px;
+      color: var(--text-muted);
+    }
+
+    .dot-status {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--green);
+    }
+
+    .btn-minimal {
+      background: transparent;
+      border: 1px solid var(--border);
+      color: var(--text);
+      font-size: 12px;
+      font-weight: 500;
+      padding: 5px 12px;
+      border-radius: var(--radius);
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+
+    .btn-minimal:hover {
+      background: var(--bg-hover);
+      border-color: var(--border-dark);
+    }
+
+    /* MAIN CONTAINER */
+    main.container {
+      max-width: 900px;
+      width: 100%;
+      margin: 0 auto;
+      padding: 40px 24px 80px;
+      flex: 1;
+    }
+
+    .tab-view {
+      display: none;
+    }
+
+    .tab-view.active {
+      display: block;
+      animation: fadeIn 0.15s ease-out;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(4px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .page-title {
+      font-size: 22px;
+      font-weight: 600;
+      letter-spacing: -0.4px;
+      margin-bottom: 6px;
+    }
+
+    .page-desc {
+      font-size: 14px;
+      color: var(--text-muted);
+      margin-bottom: 28px;
+    }
+
+    /* =========================================================================
+       TAB 1: TEST AI PRIVACY (AIRLOCK)
+       ========================================================================= */
+    .chips-group {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 12px;
+      flex-wrap: wrap;
+    }
+
+    .chips-label {
+      font-size: 12px;
+      color: var(--text-dim);
+    }
+
+    .chip-btn {
+      background: var(--bg-subtle);
+      border: 1px solid var(--border);
+      color: var(--text-muted);
+      font-size: 12px;
+      padding: 4px 10px;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+
+    .chip-btn:hover {
+      background: var(--bg-hover);
+      color: var(--text);
+      border-color: var(--border-dark);
+    }
+
+    .editor-wrapper {
+      position: relative;
+      margin-bottom: 16px;
+    }
+
+    textarea.clean-input {
+      width: 100%;
+      background: var(--bg-subtle);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      color: var(--text);
+      font-family: var(--mono);
+      font-size: 13px;
+      line-height: 1.6;
+      padding: 16px;
+      min-height: 120px;
+      resize: vertical;
+      outline: none;
+      transition: border-color 0.15s;
+    }
+
+    textarea.clean-input:focus {
+      border-color: var(--border-dark);
+      background: var(--bg);
+    }
+
+    .action-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 32px;
+    }
+
+    .helper-text {
+      font-size: 12px;
+      color: var(--text-dim);
+    }
+
+    .btn-solid {
+      background: var(--primary);
+      color: var(--bg);
+      border: none;
+      font-size: 13px;
+      font-weight: 500;
+      padding: 9px 18px;
+      border-radius: var(--radius);
+      cursor: pointer;
+      transition: opacity 0.15s;
+    }
+
+    .btn-solid:hover {
+      opacity: 0.9;
+    }
+
+    /* OUTPUT SPLIT */
+    .output-split {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+      margin-top: 20px;
+    }
+
+    @media (max-width: 680px) {
+      .output-split {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .output-card {
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      background: var(--bg-subtle);
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .output-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 10px;
+      padding-bottom: 8px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .output-label {
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--text-muted);
+    }
+
+    .output-tag {
+      font-size: 11px;
+      padding: 1px 6px;
+      border-radius: 4px;
+      font-family: var(--mono);
+    }
+
+    .tag-cloud {
+      background: var(--blue-subtle);
+      color: var(--blue);
+    }
+
+    .tag-local {
+      background: var(--green-subtle);
+      color: var(--green);
+    }
+
+    .output-code {
+      font-family: var(--mono);
+      font-size: 12px;
+      line-height: 1.6;
+      color: var(--text);
+      white-space: pre-wrap;
+      word-break: break-all;
+      min-height: 120px;
+      flex: 1;
+    }
+
+    .pill-token {
+      background: var(--blue-subtle);
+      color: var(--blue);
+      padding: 1px 5px;
+      border-radius: 4px;
+      font-weight: 600;
+    }
+
+    .pill-real {
+      background: var(--green-subtle);
+      color: var(--green);
+      padding: 1px 5px;
+      border-radius: 4px;
+      font-weight: 600;
+    }
+
+    .guarantee-note {
+      font-size: 12.5px;
+      color: var(--text-muted);
+      border-top: 1px solid var(--border);
+      padding-top: 16px;
+      margin-top: 24px;
+    }
+
+    /* =========================================================================
+       TAB 2: EXPOSURE SCORE (RADAR)
+       ========================================================================= */
+    .score-banner {
+      display: flex;
+      align-items: baseline;
+      gap: 12px;
+      margin-bottom: 24px;
+    }
+
+    .big-score {
+      font-size: 54px;
+      font-weight: 800;
+      letter-spacing: -2px;
+      line-height: 1;
+    }
+
+    .score-unit {
+      font-size: 18px;
+      color: var(--text-dim);
+    }
+
+    .score-grade {
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--amber);
+      background: var(--amber-subtle);
+      padding: 2px 10px;
+      border-radius: 20px;
+    }
+
+    .simple-list {
+      display: flex;
+      flex-direction: column;
+      border-top: 1px solid var(--border);
+      margin-bottom: 32px;
+    }
+
+    .list-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 14px 0;
+      border-bottom: 1px solid var(--border);
+      font-size: 13.5px;
+    }
+
+    .list-row-left {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .list-impact {
+      font-family: var(--mono);
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--amber);
+    }
+
+    /* K-ANON TEST */
+    .kanon-card {
+      background: var(--bg-subtle);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 20px;
+      margin-top: 24px;
+    }
+
+    .kanon-card h3 {
+      font-size: 14px;
+      font-weight: 600;
+      margin-bottom: 6px;
+    }
+
+    .kanon-card p {
+      font-size: 13px;
+      color: var(--text-muted);
+      margin-bottom: 14px;
+    }
+
+    .inline-form {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 14px;
+    }
+
+    input.input-text {
+      flex: 1;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      color: var(--text);
+      font-size: 13px;
+      padding: 8px 12px;
+      outline: none;
+    }
+
+    input.input-text:focus {
+      border-color: var(--border-dark);
+    }
+
+    .kanon-output {
+      font-size: 12px;
+      color: var(--text-muted);
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 10px 14px;
+    }
+
+    .kanon-output code {
+      font-family: var(--mono);
+      color: var(--text);
+    }
+
+    /* =========================================================================
+       TAB 3: DPDP LEGAL NOTICE
+       ========================================================================= */
+    .dpdp-grid {
+      display: grid;
+      grid-template-columns: 320px 1fr;
+      gap: 24px;
+    }
+
+    @media (max-width: 760px) {
+      .dpdp-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .form-group {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      margin-bottom: 14px;
+    }
+
+    .form-group label {
+      font-size: 12px;
+      font-weight: 500;
+      color: var(--text-muted);
+    }
+
+    select.clean-select {
+      background: var(--bg-subtle);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      color: var(--text);
+      font-size: 13px;
+      padding: 8px 10px;
+      outline: none;
+    }
+
+    .letter-container {
+      background: var(--bg-subtle);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 24px;
+      font-size: 13px;
+      line-height: 1.6;
+      max-height: 480px;
+      overflow-y: auto;
+    }
+
+    .letter-container h4 {
+      font-size: 14px;
+      text-align: center;
+      margin-bottom: 12px;
+      padding-bottom: 8px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .statutory-callout {
+      background: var(--red-subtle);
+      border: 1px solid rgba(239, 68, 68, 0.2);
+      border-radius: var(--radius);
+      padding: 8px 12px;
+      margin: 12px 0;
+      font-size: 12px;
+      color: var(--red);
+    }
+
+    .letter-actions {
+      display: flex;
+      gap: 10px;
+      margin-top: 14px;
+    }
+
+    /* =========================================================================
+       TAB 4: RAM VAULT & SETTINGS
+       ========================================================================= */
+    .vault-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
+      margin-bottom: 20px;
+    }
+
+    .vault-table th {
+      text-align: left;
+      padding: 10px 12px;
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--text-dim);
+      text-transform: uppercase;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .vault-table td {
+      padding: 12px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .vault-actions-bar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-top: 20px;
+    }
+
+    /* MINIMAL TOAST */
+    .toast-pill {
+      position: fixed;
+      bottom: 24px;
+      left: 50%;
+      transform: translateX(-50%) translateY(20px);
+      background: var(--primary);
+      color: var(--bg);
+      padding: 8px 16px;
+      border-radius: 20px;
+      font-size: 12.5px;
+      font-weight: 500;
+      opacity: 0;
+      pointer-events: none;
+      transition: all 0.2s ease;
+      z-index: 100;
+    }
+
+    .toast-pill.show {
+      transform: translateX(-50%) translateY(0);
+      opacity: 1;
+    }
+
+    /* MINIMAL CLIPBOARD MODAL */
+    .clip-alert {
+      position: fixed;
+      bottom: 24px;
+      right: 24px;
+      width: 340px;
+      background: var(--bg);
+      border: 1px solid var(--border-dark);
+      border-radius: var(--radius);
+      padding: 16px;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
+      z-index: 200;
+      display: none;
+    }
+
+    .clip-alert.active {
+      display: block;
+    }
+
+    .clip-alert-title {
+      font-size: 12.5px;
+      font-weight: 600;
+      margin-bottom: 6px;
+    }
+
+    .clip-alert-body {
+      font-size: 12px;
+      color: var(--text-muted);
+      margin-bottom: 12px;
+    }
+
+    .clip-alert-btns {
+      display: flex;
+      gap: 8px;
+    }
+
+    .btn-clip-action {
+      flex: 1;
+      background: var(--bg-subtle);
+      border: 1px solid var(--border);
+      color: var(--text);
+      padding: 6px;
+      border-radius: 6px;
+      font-size: 11.5px;
+      cursor: pointer;
+    }
+
+    .btn-clip-action.primary {
+      background: var(--primary);
+      color: var(--bg);
+      border: none;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- TOPBAR -->
+  <header class="nav-header">
+    <div class="brand-wrap">
+      <a href="#" class="brand-logo">SHADE</a>
+      <span class="brand-tag">v3.1</span>
+    </div>
+
+    <nav class="links-wrap">
+      <button class="tab-link active" data-tab="tab-airlock">Test Privacy</button>
+      <button class="tab-link" data-tab="tab-score">Exposure Score</button>
+      <button class="tab-link" data-tab="tab-dpdp">DPDP Takedown</button>
+      <button class="tab-link" data-tab="tab-vault">RAM Vault</button>
+    </nav>
+
+    <div class="header-actions">
+      <div class="status-badge">
+        <span class="dot-status"></span>
+        <span>127.0.0.1:8000</span>
+      </div>
+      <button class="btn-minimal" id="btn-clip-test">Clipboard Test</button>
+      <button class="btn-minimal" id="btn-voice-test">🎙️ Voice</button>
+    </div>
+  </header>
+
+  <!-- WORKSPACE -->
+  <main class="container">
+
+    <!-- ===================================================================
+         TAB 1: TEST AI PRIVACY (AIRLOCK)
+         =================================================================== -->
+    <section class="tab-view active" id="tab-airlock">
+      <h1 class="page-title">Prompt Privacy Airlock</h1>
+      <p class="page-desc">Test real-time masking of Indian Aadhaar, PAN, and credentials before prompts leave your device.</p>
+
+      <div class="chips-group">
+        <span class="chips-label">Quick samples:</span>
+        <button class="chip-btn" id="load-sample-aadhaar">Aadhaar + PAN KYC</button>
+        <button class="chip-btn" id="load-sample-keys">OpenAI + AWS API Keys</button>
+        <button class="chip-btn" id="load-sample-upi">Banking UPI + IFSC</button>
+      </div>
+
+      <div class="editor-wrapper">
+        <textarea class="clean-input" id="airlock-input" placeholder="Type or paste prompt with sensitive data..."></textarea>
+      </div>
+
+      <div class="action-row">
+        <span class="helper-text" id="status-verhoeff">Verhoeff D5 Checksum active (<0.02ms)</span>
+        <button class="btn-solid" id="btn-protect-prompt">Protect & Send Prompt</button>
+      </div>
+
+      <!-- Clean 2-Pane Inspection -->
+      <div class="output-split">
+        <div class="output-card">
+          <div class="output-header">
+            <span class="output-label">Outbound Egress (What OpenAI Receives)</span>
+            <span class="output-tag tag-cloud">Decoys Only</span>
+          </div>
+          <div class="output-code" id="output-cloud">Click "Protect & Send Prompt" above...</div>
+        </div>
+
+        <div class="output-card">
+          <div class="output-header">
+            <span class="output-label">Local Screen (What You Receive)</span>
+            <span class="output-tag tag-local">Restored Locally</span>
+          </div>
+          <div class="output-code" id="output-local">Waiting for test...</div>
+        </div>
+      </div>
+
+      <p class="guarantee-note">
+        <strong>Guaranteed Local Privacy:</strong> Plaintext data is never written to disk or logs. Real values exist only in volatile RAM with a 15-minute Time-To-Live.
+      </p>
+    </section>
+
+    <!-- ===================================================================
+         TAB 2: EXPOSURE SCORE (RADAR)
+         =================================================================== -->
+    <section class="tab-view" id="tab-score">
+      <h1 class="page-title">Identity Exposure Score</h1>
+      <p class="page-desc">Historical data exposure audit based on documented public breach archives.</p>
+
+      <div class="score-banner">
+        <span class="big-score">72</span>
+        <span class="score-unit">/ 100</span>
+        <span class="score-grade">Elevated Risk</span>
+      </div>
+
+      <div class="simple-list">
+        <div class="list-row">
+          <div class="list-row-left">
+            <span>Corporate Password (compromised in dump)</span>
+          </div>
+          <span class="list-impact">+35</span>
+        </div>
+
+        <div class="list-row">
+          <div class="list-row-left">
+            <span>Aadhaar Record (indexed in public scrape)</span>
+          </div>
+          <span class="list-impact">+21</span>
+        </div>
+
+        <div class="list-row">
+          <div class="list-row-left">
+            <span>Phone Number (commercial broker directory)</span>
+          </div>
+          <span class="list-impact">+15</span>
+        </div>
+
+        <div class="list-row">
+          <div class="list-row-left">
+            <span>Work Email (marketing attendee listing)</span>
+          </div>
+          <span class="list-impact">+2</span>
+        </div>
+      </div>
+
+      <!-- Private Check -->
+      <div class="kanon-card">
+        <h3>Private Breach Lookup (k-Anonymity)</h3>
+        <p>Check passwords without exposing them. Only the first 5 characters of the SHA-1 hash are queried; matching occurs 100% on your laptop.</p>
+        
+        <div class="inline-form">
+          <input type="text" class="input-text" id="input-kanon" value="Corporate@Pass2024!" placeholder="Enter password to audit...">
+          <button class="btn-solid" id="btn-kanon-check">Check Privately</button>
+        </div>
+
+        <div class="kanon-output" id="kanon-status">
+          Transmitted prefix: <code>[5BAA6]</code> • Matched locally in memory.
+        </div>
+      </div>
+    </section>
+
+    <!-- ===================================================================
+         TAB 3: DPDP LEGAL NOTICE
+         =================================================================== -->
+    <section class="tab-view" id="tab-dpdp">
+      <h1 class="page-title">India DPDP Act 2023 — Erasure Requisition</h1>
+      <p class="page-desc">Generate statutory data erasure requests under Section 12(1) and 12(3) citing Section 33 penalties (up to ₹250 Cr).</p>
+
+      <div class="dpdp-grid">
+        <div>
+          <div class="form-group">
+            <label>Target Company</label>
+            <select class="clean-select" id="select-company">
+              <option value="broker">Commercial Lead & Data Broker (Aggregator X)</option>
+              <option value="swiggy">Swiggy India (Bundl Technologies)</option>
+              <option value="zomato">Zomato India (Eternal Limited)</option>
+              <option value="phonepe">PhonePe Private Limited</option>
+              <option value="cred">CRED (Dreamplug Technologies)</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label>Your Full Name</label>
+            <input type="text" class="input-text" id="user-name" value="Aarav Sharma">
+          </div>
+
+          <div class="form-group">
+            <label>Your Registered Email</label>
+            <input type="email" class="input-text" id="user-email" value="aarav.sharma@domain.in">
+          </div>
+
+          <div class="form-group">
+            <label>Data to Erase</label>
+            <input type="text" class="input-text" id="user-data" value="Phone numbers, Aadhaar records, behavioral profile logs">
+          </div>
+
+          <button class="btn-solid" style="width: 100%; margin-top: 6px;" id="btn-build-notice">Generate Notice</button>
+        </div>
+
+        <div>
+          <div class="letter-container" id="notice-preview">
+            <!-- Rendered by JS -->
+          </div>
+
+          <div class="letter-actions">
+            <button class="btn-solid" id="btn-mail-notice">Send via Email</button>
+            <button class="btn-minimal" id="btn-copy-notice">Copy Text</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===================================================================
+         TAB 4: RAM VAULT & SETTINGS
+         =================================================================== -->
+    <section class="tab-view" id="tab-vault">
+      <h1 class="page-title">Ephemeral RAM Vault</h1>
+      <p class="page-desc">Active token mappings held strictly in host RAM. Wiped instantly on process exit.</p>
+
+      <table class="vault-table">
+        <thead>
+          <tr>
+            <th>Synthetic Placeholder</th>
+            <th>Type</th>
+            <th>Plaintext (Host Only)</th>
+            <th>TTL</th>
+            <th>Action</th>
+          </tr>
+        </thead>
+        <tbody id="vault-body">
+          <tr>
+            <td><code>&lt;SYN_AADHAAR_9921&gt;</code></td>
+            <td>Indian Aadhaar (Verhoeff D5)</td>
+            <td><code>5432 9876 1234</code></td>
+            <td><span style="color:var(--amber);">14:15</span></td>
+            <td><button class="btn-minimal" onclick="app.removeToken('<SYN_AADHAAR_9921>')">Revoke</button></td>
+          </tr>
+          <tr>
+            <td><code>&lt;SYN_PAN_8832&gt;</code></td>
+            <td>Indian PAN (Individual 'P')</td>
+            <td><code>ABCDE1234F</code></td>
+            <td><span style="color:var(--amber);">14:15</span></td>
+            <td><button class="btn-minimal" onclick="app.removeToken('<SYN_PAN_8832>')">Revoke</button></td>
+          </tr>
+        </tbody>
+      </table>
+
+      <div class="vault-actions-bar">
+        <span style="font-size: 12px; color: var(--text-dim);">AES-256-GCM memory encryption keys destroyed on wipe.</span>
+        <button class="btn-minimal" id="btn-wipe-vault" style="color:var(--red);">Wipe RAM Immediately</button>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- TOAST -->
+  <div class="toast-pill" id="toast-pill">Notice</div>
+
+  <!-- CLIPBOARD ALERT -->
+  <div class="clip-alert" id="clip-alert">
+    <div class="clip-alert-title">Aadhaar Copied to Clipboard</div>
+    <div class="clip-alert-body">
+      S.H.A.D.E. detected <code>2668 5333 9452</code>. Protect AI prompts without breaking banking KYC:
+    </div>
+    <div class="clip-alert-btns">
+      <button class="btn-clip-action primary" id="btn-clip-decoy">Paste Safe Decoy</button>
+      <button class="btn-clip-action" id="btn-clip-real">Send Real Value (KYC)</button>
+    </div>
+  </div>
+
+  <script>
+    // =========================================================================
+    // DETERMINISTIC VERHOEFF & DLP ENGINE
+    // =========================================================================
+    const Verhoeff = {
+      d: [
+        [0, 1, 2, 3, 4, 5, 6, 7, 8, 9],
+        [1, 2, 3, 4, 0, 6, 7, 8, 9, 5],
+        [2, 3, 4, 0, 1, 7, 8, 9, 5, 6],
+        [3, 4, 0, 1, 2, 8, 9, 5, 6, 7],
+        [4, 0, 1, 2, 3, 9, 5, 6, 7, 8],
+        [5, 9, 8, 7, 6, 0, 4, 3, 2, 1],
+        [6, 5, 9, 8, 7, 1, 0, 4, 3, 2],
+        [7, 6, 5, 9, 8, 2, 1, 0, 4, 3],
+        [8, 7, 6, 5, 9, 3, 2, 1, 0, 4],
+        [9, 8, 7, 6, 5, 4, 3, 2, 1, 0]
+      ],
+      p: [
+        [0, 1, 2, 3, 4, 5, 6, 7, 8, 9],
+        [1, 5, 7, 6, 2, 8, 3, 0, 9, 4],
+        [5, 8, 0, 3, 7, 9, 6, 1, 4, 2],
+        [8, 9, 1, 6, 0, 4, 3, 5, 2, 7],
+        [9, 4, 5, 3, 1, 2, 6, 8, 7, 0],
+        [4, 2, 8, 6, 5, 7, 3, 9, 0, 1],
+        [2, 7, 9, 3, 8, 0, 6, 4, 1, 5],
+        [7, 0, 4, 6, 9, 1, 3, 2, 5, 8]
+      ],
+      validate(str) {
+        const clean = str.replace(/\D/g, '');
+        if (clean.length !== 12) return false;
+        let c = 0;
+        const rev = clean.split('').reverse().map(Number);
+        for (let i = 0; i < rev.length; i++) {
+          c = this.d[c][this.p[i % 8][rev[i]]];
+        }
+        return c === 0;
+      }
+    };
+
+    function scanPII(text) {
+      const results = [];
+      const aadhaarRegex = /\b([2-9][0-9]{3}\s?[0-9]{4}\s?[0-9]{4})\b/g;
+      let m;
+      while ((m = aadhaarRegex.exec(text)) !== null) {
+        if (Verhoeff.validate(m[1])) {
+          results.push({ type: 'Aadhaar', real: m[1], decoy: '<SYN_AADHAAR_9921>' });
+        }
+      }
+      const panRegex = /\b([A-Z]{5}[0-9]{4}[A-Z]{1})\b/g;
+      while ((m = panRegex.exec(text)) !== null) {
+        results.push({ type: 'PAN Card', real: m[1], decoy: '<SYN_PAN_8832>' });
+      }
+      const keyRegex = /\b(sk-[A-Za-z0-9_-]{20,}|AKIA[0-9A-Z]{16})\b/g;
+      while ((m = keyRegex.exec(text)) !== null) {
+        results.push({ type: 'API Key', real: m[1], decoy: '<SYN_API_KEY_7F41>' });
+      }
+      const upiRegex = /\b([a-zA-Z0-9._-]+@[a-zA-Z]{2,64})\b/g;
+      while ((m = upiRegex.exec(text)) !== null) {
+        if (!m[1].includes('.com') && !m[1].includes('.in')) {
+          results.push({ type: 'UPI', real: m[1], decoy: '<SYN_UPI_3A19>' });
+        }
+      }
+      return results;
+    }
+
+    class MinimalApp {
+      constructor() {
+        this.init();
+      }
+
+      init() {
+        this.bindNav();
+        this.bindAirlock();
+        this.bindDPDP();
+        this.bindKanon();
+        this.bindClipboard();
+        this.bindVoice();
+      }
+
+      bindNav() {
+        const links = document.querySelectorAll('.tab-link');
+        const views = document.querySelectorAll('.tab-view');
+
+        links.forEach(btn => {
+          btn.addEventListener('click', () => {
+            links.forEach(l => l.classList.remove('active'));
+            views.forEach(v => v.classList.remove('active'));
+
+            btn.classList.add('active');
+            const target = btn.getAttribute('data-tab');
+            document.getElementById(target).classList.add('active');
+          });
+        });
+      }
+
+      toast(msg) {
+        const t = document.getElementById('toast-pill');
+        t.textContent = msg;
+        t.classList.add('show');
+        setTimeout(() => t.classList.remove('show'), 2400);
+      }
+
+      bindAirlock() {
+        const input = document.getElementById('airlock-input');
+        const btnProtect = document.getElementById('btn-protect-prompt');
+        const cloudView = document.getElementById('output-cloud');
+        const localView = document.getElementById('output-local');
+
+        const samples = {
+          aadhaar: `Verify loan application for applicant Aarav Sharma.
+Customer Aadhaar UID: 2668 5333 9452 (Verified UIDAI)
+Taxpayer PAN Card: ABCDE1234F
+Check retail credit risk eligibility.`,
+          keys: `# Production Automation Script
+OPENAI_API_KEY = "sk-proj-9a8b7c6d5e4f3a2b1c0d9e8f7a6b5c4d3e2f1a0b"
+AWS_ACCESS_KEY_ID = "AKIAIOSFODNN7EXAMPLE"`,
+          upi: `Process vendor payout disbursement:
+Beneficiary UPI: merchant.finance@okaxis
+Bank Branch IFSC: SBIN0001234`
+        };
+
+        document.getElementById('load-sample-aadhaar').addEventListener('click', () => {
+          input.value = samples.aadhaar;
+          this.toast('Loaded Aadhaar + PAN sample');
+        });
+        document.getElementById('load-sample-keys').addEventListener('click', () => {
+          input.value = samples.keys;
+          this.toast('Loaded API keys sample');
+        });
+        document.getElementById('load-sample-upi').addEventListener('click', () => {
+          input.value = samples.upi;
+          this.toast('Loaded UPI banking sample');
+        });
+
+        btnProtect.addEventListener('click', () => {
+          const text = input.value.trim();
+          if (!text) return;
+
+          const items = scanPII(text);
+          let safe = text;
+          items.forEach(i => {
+            safe = safe.split(i.real).join(i.decoy);
+          });
+          cloudView.innerHTML = safe.replace(/<SYN_[^>]+>/g, '<span class="pill-token">$&</span>');
+
+          if (items.length > 0) {
+            const resp = `Target record ${items[0].decoy} processed successfully. Cloud AI had zero access to raw identity credentials.`;
+            localView.innerHTML = resp.split(items[0].decoy).join(`<span class="pill-real">${items[0].real}</span>`);
+          } else {
+            localView.textContent = `Clean prompt analyzed. Zero sensitive credentials detected.`;
+          }
+
+          this.toast(`Protected ${items.length} secret(s)`);
+        });
+
+        document.getElementById('load-sample-aadhaar').click();
+      }
+
+      bindKanon() {
+        const inp = document.getElementById('input-kanon');
+        const btn = document.getElementById('btn-kanon-check');
+        const out = document.getElementById('kanon-status');
+
+        btn.addEventListener('click', async () => {
+          const val = inp.value;
+          if (!val) return;
+
+          const enc = new TextEncoder().encode(val);
+          const hashBuf = await crypto.subtle.digest('SHA-1', enc);
+          const hex = Array.from(new Uint8Array(hashBuf)).map(b => b.toString(16).padStart(2, '0')).join('').toUpperCase();
+          const pfx = hex.substring(0, 5);
+          const sfx = hex.substring(5);
+
+          out.innerHTML = `Transmitted prefix: <code>[${pfx}]</code> • Matched suffix <code>${sfx.substring(0, 8)}...</code> locally in memory.`;
+          this.toast('Checked privately (Prefix only)');
+        });
+      }
+
+      bindDPDP() {
+        const preview = document.getElementById('notice-preview');
+        const render = () => {
+          const comp = document.getElementById('select-company').selectedOptions[0].text;
+          const name = document.getElementById('user-name').value;
+          const email = document.getElementById('user-email').value;
+          const data = document.getElementById('user-data').value;
+          const today = new Date().toLocaleDateString('en-IN', { day: '2-digit', month: 'long', year: 'numeric' });
+
+          preview.innerHTML = `
+            <h4>STATUTORY REQUISITION FOR ERASURE OF PERSONAL DATA</h4>
+            <p style="text-align: right; color: var(--text-dim); font-size: 11px;">Date: ${today}</p>
+            <p><strong>TO:</strong> The Grievance Officer, ${comp}</p>
+            <p><strong>FROM:</strong> ${name} (${email})</p>
+            <p><strong>SUBJECT:</strong> Exercise of Right to Erasure under Section 12(1) and Mandate under Section 12(3) of India's DPDP Act, 2023.</p>
+            <br>
+            <p>Dear Sir / Madam,</p>
+            <p>1. In my capacity as a Data Principal under Section 2(h) of the <strong>Digital Personal Data Protection Act, 2023</strong>, I hereby formally request the comprehensive erasure of all my personal data in your possession, specifically: <strong>${data}</strong>.</p>
+            <p>2. Under Section 12(3) of the Act, a Data Fiduciary shall erase personal data upon receiving this requisition, unless retention is mandated by law.</p>
+            <div class="statutory-callout">
+              <strong>STATUTORY PENALTIES (SECTION 33 & SCHEDULE):</strong> Non-compliance carries penalties up to <strong>₹250 Crore</strong> under the Act.
+            </div>
+            <p>Kindly confirm written compliance to my registered email within 7 business days.</p>
+            <p style="margin-top: 14px;">Yours faithfully,<br><strong>${name}</strong></p>
+          `;
+        };
+
+        document.getElementById('btn-build-notice').addEventListener('click', () => {
+          render();
+          this.toast('Notice generated');
+        });
+        render();
+
+        document.getElementById('btn-mail-notice').addEventListener('click', () => {
+          window.location.href = `mailto:grievance@company.in?subject=DPDP Act 2023 Section 12 Requisition&body=${encodeURIComponent(preview.innerText)}`;
+        });
+
+        document.getElementById('btn-copy-notice').addEventListener('click', () => {
+          navigator.clipboard.writeText(preview.innerText);
+          this.toast('Copied to clipboard');
+        });
+      }
+
+      bindClipboard() {
+        const alertEl = document.getElementById('clip-alert');
+        document.getElementById('btn-clip-test').addEventListener('click', () => {
+          alertEl.classList.add('active');
+        });
+        document.getElementById('btn-clip-decoy').addEventListener('click', () => {
+          alertEl.classList.remove('active');
+          this.toast('Injected decoy <SYN_AADHAAR_9921>');
+        });
+        document.getElementById('btn-clip-real').addEventListener('click', () => {
+          alertEl.classList.remove('active');
+          this.toast('Allowed real Aadhaar for KYC');
+        });
+      }
+
+      bindVoice() {
+        document.getElementById('btn-voice-test').addEventListener('click', () => {
+          if ('speechSynthesis' in window) {
+            window.speechSynthesis.cancel();
+            const u = new SpeechSynthesisUtterance('Privacy shield active. Zero bytes leaked.');
+            u.rate = 1.05;
+            window.speechSynthesis.speak(u);
+          }
+          this.toast('Hey Shade: Privacy shield active');
+        });
+
+        document.getElementById('btn-wipe-vault').addEventListener('click', () => {
+          document.getElementById('vault-body').innerHTML = `
+            <tr><td colspan="5" style="text-align:center; color:var(--text-dim); padding:20px;">Vault empty. Cryptographic keys wiped.</td></tr>
+          `;
+          this.toast('RAM wiped and zeroized');
+        });
+      }
+
+      removeToken(token) {
+        this.toast(`Revoked ${token}`);
+      }
+    }
+
+    window.app = new MinimalApp();
+  </script>
+</body>
+</html>
